@@ -23,6 +23,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private AudioSource footstepAudioSource;
     [SerializeField] private AudioClip[] footstepSounds;
     [SerializeField] private float footstepInterval = 0.5f;
+
+    [Header("Stamina Referansı")]
+    [SerializeField] private StaminaSystem staminaSystem;
     
     private CharacterController characterController;
     private Vector3 moveDirection;
@@ -73,27 +76,37 @@ public class PlayerController : MonoBehaviour
     
     void HandleMovement()
     {
-        float moveX = Input.GetAxis("Horizontal");
-        float moveZ = Input.GetAxis("Vertical");
-        
-        bool isSprinting = Input.GetKey(KeyCode.LeftShift) && !isCrouching;
-        float currentSpeed = isCrouching ? crouchWalkSpeed : (isSprinting ? sprintSpeed : walkSpeed);
-        
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
-        moveDirection = move.normalized * currentSpeed;
-        
-        if (characterController.isGrounded)
-        {
-            verticalVelocity = -2f;
-        }
-        else
-        {
-            verticalVelocity += gravity * Time.deltaTime;
-        }
-        
-        moveDirection.y = verticalVelocity;
-        
-        characterController.Move(moveDirection * Time.deltaTime);
+    float moveX = 0f;
+    float moveZ = 0f;
+    
+    if (Keyboard.current != null)
+    {
+        if (Keyboard.current.wKey.isPressed) moveZ = 1f;
+        if (Keyboard.current.sKey.isPressed) moveZ = -1f;
+        if (Keyboard.current.aKey.isPressed) moveX = -1f;
+        if (Keyboard.current.dKey.isPressed) moveX = 1f;
+    }
+    
+    bool wantsToSprint = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+    bool canSprint = staminaSystem != null ? staminaSystem.CanSprint() : true;
+    bool isSprinting = wantsToSprint && canSprint && !isCrouching;
+    
+    float currentSpeed = isCrouching ? crouchWalkSpeed : (isSprinting ? sprintSpeed : walkSpeed);
+    
+    Vector3 move = transform.right * moveX + transform.forward * moveZ;
+    moveDirection = move.normalized * currentSpeed;
+    
+    if (characterController.isGrounded)
+    {
+        verticalVelocity = -2f;
+    }
+    else
+    {
+        verticalVelocity += gravity * Time.deltaTime;
+    }
+    
+    moveDirection.y = verticalVelocity;
+    characterController.Move(moveDirection * Time.deltaTime);
     }
     
     void HandleCamera()
