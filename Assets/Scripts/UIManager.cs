@@ -11,12 +11,18 @@ public class UIManager : MonoBehaviour
     [Header("Stamina UI")]
     [SerializeField] private RectTransform staminaFillTransform;
     
+    [Header("Sağlık UI")]
+    [SerializeField] private RectTransform healthFillTransform;
+    [SerializeField] private TextMeshProUGUI healthText;
+    
     [Header("Referanslar")]
     [SerializeField] private Flashlight flashlight;
     [SerializeField] private StaminaSystem staminaSystem;
+    [SerializeField] private HealthSystem healthSystem;
     
     private Image batteryFillImage;
     private Image staminaFillImage;
+    private Image healthFillImage;
     
     void Start()
     {
@@ -29,12 +35,18 @@ public class UIManager : MonoBehaviour
         {
             staminaFillImage = staminaFillTransform.GetComponent<Image>();
         }
+        
+        if (healthFillTransform != null)
+        {
+            healthFillImage = healthFillTransform.GetComponent<Image>();
+        }
     }
     
     void Update()
     {
         UpdateBatteryUI();
         UpdateStaminaUI();
+        UpdateHealthUI();
     }
     
     void UpdateBatteryUI()
@@ -92,6 +104,38 @@ public class UIManager : MonoBehaviour
             else
             {
                 staminaFillImage.color = new Color(0f, 0.9f, 1f);
+            }
+        }
+    }
+    
+    void UpdateHealthUI()
+    {
+        if (healthSystem == null || healthFillTransform == null) return;
+        
+        float healthPercent = healthSystem.GetHealthPercentage();
+        
+        Vector3 scale = healthFillTransform.localScale;
+        scale.x = healthPercent / 100f;
+        healthFillTransform.localScale = scale;
+        
+        if (healthText != null)
+        {
+            healthText.text = $"{Mathf.RoundToInt(healthSystem.GetCurrentHealth())}/{Mathf.RoundToInt(healthSystem.GetMaxHealth())}";
+        }
+        
+        if (healthFillImage != null)
+        {
+            if (healthPercent < 25f)
+            {
+                healthFillImage.color = Color.red;
+            }
+            else if (healthPercent < 50f)
+            {
+                healthFillImage.color = Color.yellow;
+            }
+            else
+            {
+                healthFillImage.color = new Color(0.2f, 1f, 0.2f);
             }
         }
     }

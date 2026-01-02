@@ -90,6 +90,27 @@ public class Door : MonoBehaviour, IInteractable
         
         PlaySound(isOpen ? openSound : closeSound);
         
+        // Ses çıkar (NPC'ler duyabilir)
+        SoundEmitter soundEmitter = GetComponent<SoundEmitter>();
+        if (soundEmitter == null)
+        {
+            soundEmitter = gameObject.AddComponent<SoundEmitter>();
+        }
+        
+        if (soundEmitter != null)
+        {
+            soundEmitter.soundType = isOpen ? SoundEmitter.SoundType.DoorOpen : SoundEmitter.SoundType.DoorClose;
+            soundEmitter.soundRadius = 10f;
+            soundEmitter.EmitSound(0.6f);
+        }
+        
+        // PlayerSoundController'a da bildir
+        PlayerSoundController soundController = FindFirstObjectByType<PlayerSoundController>();
+        if (soundController != null)
+        {
+            soundController.EmitInteractionSound(0.5f);
+        }
+        
         Debug.Log($"{gameObject.name} {(isOpen ? "açıldı" : "kapandı")}");
     }
     

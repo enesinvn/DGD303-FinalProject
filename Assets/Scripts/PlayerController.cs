@@ -14,6 +14,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float mouseSensitivity = 2f;
     [SerializeField] private float maxLookAngle = 80f;
     
+    public float MouseSensitivity 
+    { 
+        get { return mouseSensitivity; } 
+        set { mouseSensitivity = Mathf.Clamp(value, 0.1f, 10f); } 
+    }
+    
     [Header("Eğilme Ayarları")]
     [SerializeField] private float standingHeight = 2f;
     [SerializeField] private float crouchHeight = 1f;
@@ -26,6 +32,9 @@ public class PlayerController : MonoBehaviour
 
     [Header("Stamina Referansı")]
     [SerializeField] private StaminaSystem staminaSystem;
+    
+    [Header("Saklanma Referansı")]
+    [SerializeField] private PlayerHiding playerHiding;
     
     private CharacterController characterController;
     private Vector3 moveDirection;
@@ -76,37 +85,43 @@ public class PlayerController : MonoBehaviour
     
     void HandleMovement()
     {
-    float moveX = 0f;
-    float moveZ = 0f;
-    
-    if (Keyboard.current != null)
-    {
-        if (Keyboard.current.wKey.isPressed) moveZ = 1f;
-        if (Keyboard.current.sKey.isPressed) moveZ = -1f;
-        if (Keyboard.current.aKey.isPressed) moveX = -1f;
-        if (Keyboard.current.dKey.isPressed) moveX = 1f;
-    }
-    
-    bool wantsToSprint = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
-    bool canSprint = staminaSystem != null ? staminaSystem.CanSprint() : true;
-    bool isSprinting = wantsToSprint && canSprint && !isCrouching;
-    
-    float currentSpeed = isCrouching ? crouchWalkSpeed : (isSprinting ? sprintSpeed : walkSpeed);
-    
-    Vector3 move = transform.right * moveX + transform.forward * moveZ;
-    moveDirection = move.normalized * currentSpeed;
-    
-    if (characterController.isGrounded)
-    {
-        verticalVelocity = -2f;
-    }
-    else
-    {
-        verticalVelocity += gravity * Time.deltaTime;
-    }
-    
-    moveDirection.y = verticalVelocity;
-    characterController.Move(moveDirection * Time.deltaTime);
+        // Saklanıyorsa hareket etme
+        if (playerHiding != null && playerHiding.IsHiding())
+        {
+            return;
+        }
+        
+        float moveX = 0f;
+        float moveZ = 0f;
+        
+        if (Keyboard.current != null)
+        {
+            if (Keyboard.current.wKey.isPressed) moveZ = 1f;
+            if (Keyboard.current.sKey.isPressed) moveZ = -1f;
+            if (Keyboard.current.aKey.isPressed) moveX = -1f;
+            if (Keyboard.current.dKey.isPressed) moveX = 1f;
+        }
+        
+        bool wantsToSprint = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+        bool canSprint = staminaSystem != null ? staminaSystem.CanSprint() : true;
+        bool isSprinting = wantsToSprint && canSprint && !isCrouching;
+        
+        float currentSpeed = isCrouching ? crouchWalkSpeed : (isSprinting ? sprintSpeed : walkSpeed);
+        
+        Vector3 move = transform.right * moveX + transform.forward * moveZ;
+        moveDirection = move.normalized * currentSpeed;
+        
+        if (characterController.isGrounded)
+        {
+            verticalVelocity = -2f;
+        }
+        else
+        {
+            verticalVelocity += gravity * Time.deltaTime;
+        }
+        
+        moveDirection.y = verticalVelocity;
+        characterController.Move(moveDirection * Time.deltaTime);
     }
     
     void HandleCamera()
