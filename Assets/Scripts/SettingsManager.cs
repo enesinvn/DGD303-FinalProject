@@ -21,7 +21,7 @@ public class SettingsManager : MonoBehaviour
     [Header("UI Toggles")]
     [SerializeField] private Toggle fullscreenToggle;
     
-    [Header("Referanslar")]
+    [Header("References")]
     [SerializeField] private PlayerController playerController;
     
     private const string MASTER_VOLUME_KEY = "MasterVolume";
@@ -137,7 +137,6 @@ public class SettingsManager : MonoBehaviour
     
     void LoadSettings()
     {
-        // Ses ayarları
         float masterVolume = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 1f);
         float musicVolume = PlayerPrefs.GetFloat(MUSIC_VOLUME_KEY, 1f);
         float sfxVolume = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 1f);
@@ -160,7 +159,6 @@ public class SettingsManager : MonoBehaviour
             SetSFXVolume(sfxVolume);
         }
         
-        // Mouse hassasiyeti
         float mouseSensitivity = PlayerPrefs.GetFloat(MOUSE_SENSITIVITY_KEY, 2f);
         if (mouseSensitivitySlider != null)
         {
@@ -168,7 +166,6 @@ public class SettingsManager : MonoBehaviour
             SetMouseSensitivity(mouseSensitivity);
         }
         
-        // Kalite
         int quality = PlayerPrefs.GetInt(QUALITY_KEY, QualitySettings.GetQualityLevel());
         if (qualityDropdown != null)
         {
@@ -176,7 +173,6 @@ public class SettingsManager : MonoBehaviour
             SetQuality(quality);
         }
         
-        // Fullscreen
         bool fullscreen = PlayerPrefs.GetInt(FULLSCREEN_KEY, Screen.fullScreen ? 1 : 0) == 1;
         if (fullscreenToggle != null)
         {

@@ -25,17 +25,30 @@ public class Objective
 
 public enum ObjectiveType
 {
-    CollectItem,    // Eşya topla
-    ReachLocation,  // Konuma ulaş
-    UnlockDoor,     // Kapı aç
-    UseItem,        // Eşya kullan
-    Escape,         // Kaç
-    Custom          // Özel
+    CollectItem,
+    ReachLocation,
+    UnlockDoor,
+    UseItem,
+    Escape,
+    Custom
 }
 
 public class ObjectiveSystem : MonoBehaviour
 {
-    [Header("Görevler")]
+    private static ObjectiveSystem instance;
+    public static ObjectiveSystem Instance
+    {
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindFirstObjectByType<ObjectiveSystem>();
+            }
+            return instance;
+        }
+    }
+    
+    [Header("Objectives")]
     [SerializeField] private List<Objective> objectives = new List<Objective>();
     
     [Header("UI")]
@@ -43,7 +56,7 @@ public class ObjectiveSystem : MonoBehaviour
     [SerializeField] private TextMeshProUGUI objectiveTitleText;
     [SerializeField] private TextMeshProUGUI objectiveDescriptionText;
     
-    [Header("Referanslar")]
+    [Header("References")]
     [SerializeField] private InventorySystem inventorySystem;
     
     public delegate void ObjectiveCompletedDelegate(string objectiveID);
@@ -51,6 +64,19 @@ public class ObjectiveSystem : MonoBehaviour
     
     public delegate void ObjectiveAddedDelegate(Objective objective);
     public event ObjectiveAddedDelegate OnObjectiveAdded;
+    
+    void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else if (instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+    }
     
     void Start()
     {
@@ -67,7 +93,6 @@ public class ObjectiveSystem : MonoBehaviour
     
     void Update()
     {
-        // Aktif görevleri kontrol et
         CheckObjectives();
     }
     
@@ -80,7 +105,7 @@ public class ObjectiveSystem : MonoBehaviour
         OnObjectiveAdded?.Invoke(newObjective);
         UpdateUI();
         
-        Debug.Log($"Yeni görev: {title}");
+        Debug.Log($"New objective: {title}");
     }
     
     public void CompleteObjective(string objectiveID)
@@ -95,7 +120,7 @@ public class ObjectiveSystem : MonoBehaviour
             OnObjectiveCompleted?.Invoke(objectiveID);
             UpdateUI();
             
-            Debug.Log($"Görev tamamlandı: {obj.title}");
+            Debug.Log($"Objective completed: {obj.title}");
         }
     }
     
@@ -121,10 +146,8 @@ public class ObjectiveSystem : MonoBehaviour
                 switch (obj.type)
                 {
                     case ObjectiveType.CollectItem:
-                        // Eşya toplama kontrolü (örnek: "Key" eşyası)
                         if (inventorySystem != null)
                         {
-                            // Objective ID'den eşya adını çıkar (örnek: "collect_key" -> "Key")
                             string itemName = ExtractItemNameFromID(obj.objectiveID);
                             if (inventorySystem.HasItem(itemName))
                             {
@@ -134,11 +157,9 @@ public class ObjectiveSystem : MonoBehaviour
                         break;
                         
                     case ObjectiveType.ReachLocation:
-                        // Konum kontrolü (ObjectiveTrigger ile yapılacak)
                         break;
                         
                     case ObjectiveType.UnlockDoor:
-                        // Kapı açma kontrolü (LockSystem ile yapılacak)
                         break;
                 }
                 
@@ -152,15 +173,61 @@ public class ObjectiveSystem : MonoBehaviour
     
     string ExtractItemNameFromID(string id)
     {
-        // Basit bir çıkarım (örnek: "collect_key" -> "Key")
-        if (id.Contains("key"))
+        id = id.ToLower();
+        
+        if (id.Contains("key") && !id.Contains("keycard"))
             return "Key";
+        if (id.Contains("master_key"))
+            return "Master Key";
+        if (id.Contains("keycard") || id.Contains("card"))
+            return "Keycard";
         if (id.Contains("battery"))
             return "Battery";
-        if (id.Contains("card"))
-            return "Keycard";
+        if (id.Contains("health"))
+            return "Health Pack";
+        
+        if (id.Contains("collect_"))
+        {
+            string itemName = id.Replace("collect_", "");
+            if (itemName.Length > 0)
+            {
+                itemName = char.ToUpper(itemName[0]) + itemName.Substring(1);
+            }
+            return itemName;
+        }
         
         return "Item";
+    }
+    
+    public void OnItemCollected(string itemName)
+    {
+        foreach (Objective obj in objectives)
+        {
+            if (obj.isActive && !obj.isCompleted && obj.type == ObjectiveType.CollectItem)
+            {
+                string requiredItem = ExtractItemNameFromID(obj.objectiveID);
+                if (requiredItem.Equals(itemName, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    CompleteObjective(obj.objectiveID);
+                    Debug.Log($"[ObjectiveSystem] Objective completed: {obj.title} (Item: {itemName})");
+                }
+            }
+        }
+    }
+    
+    public void OnDoorUnlocked(string doorID = "")
+    {
+        foreach (Objective obj in objectives)
+        {
+            if (obj.isActive && !obj.isCompleted && obj.type == ObjectiveType.UnlockDoor)
+            {
+                if (string.IsNullOrEmpty(doorID) || obj.objectiveID.Contains(doorID))
+                {
+                    CompleteObjective(obj.objectiveID);
+                    Debug.Log($"[ObjectiveSystem] Objective completed: {obj.title}");
+                }
+            }
+        }
     }
     
     void UpdateUI()

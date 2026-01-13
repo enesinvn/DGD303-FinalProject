@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class HeadBob : MonoBehaviour
 {
-    [Header("Bob Ayarları")]
+    [Header("Bob Settings")]
     [SerializeField] private bool enableBob = true;
     [SerializeField] private float walkBobSpeed = 14f;
     [SerializeField] private float walkBobAmount = 0.05f;
@@ -11,11 +11,11 @@ public class HeadBob : MonoBehaviour
     [SerializeField] private float crouchBobSpeed = 8f;
     [SerializeField] private float crouchBobAmount = 0.025f;
     
-    [Header("Referanslar")]
+    [Header("References")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private CharacterController characterController;
 
-    [Header("FOV Değişimi")]
+    [Header("FOV Change")]
     [SerializeField] private Camera mainCamera;
     [SerializeField] private float normalFOV = 60f;
     [SerializeField] private float sprintFOV = 70f;
@@ -54,6 +54,8 @@ public class HeadBob : MonoBehaviour
         if (!enableBob) return;
         if (cameraTransform == null || characterController == null) return;
         
+        if (!characterController.enabled) return;
+        
         float speed = characterController.velocity.magnitude;
         
         bool isSprinting = UnityEngine.InputSystem.Keyboard.current != null && 
@@ -76,12 +78,14 @@ public class HeadBob : MonoBehaviour
             bobAmount = crouchBobAmount;
         }
         
+        float currentBaseY = cameraTransform.localPosition.y;
+        
         if (speed > 0.1f && characterController.isGrounded)
         {
             timer += Time.deltaTime * bobSpeed;
             
             Vector3 newPos = cameraTransform.localPosition;
-            newPos.y = defaultYPos + Mathf.Sin(timer) * bobAmount;
+            newPos.y = currentBaseY + Mathf.Sin(timer) * bobAmount;
             newPos.x = Mathf.Cos(timer * 0.5f) * bobAmount * 0.5f; 
             cameraTransform.localPosition = newPos;
         }
@@ -89,7 +93,6 @@ public class HeadBob : MonoBehaviour
         {
             timer = 0;
             Vector3 newPos = cameraTransform.localPosition;
-            newPos.y = Mathf.Lerp(newPos.y, defaultYPos, Time.deltaTime * 5f);
             newPos.x = Mathf.Lerp(newPos.x, 0f, Time.deltaTime * 5f);
             cameraTransform.localPosition = newPos;
         }
@@ -105,5 +108,14 @@ public class HeadBob : MonoBehaviour
     public void SetBobEnabled(bool enabled)
     {
         enableBob = enabled;
+        
+        if (!enabled && cameraTransform != null)
+        {
+            Vector3 resetPos = cameraTransform.localPosition;
+            resetPos.y = defaultYPos;
+            resetPos.x = 0f;
+            cameraTransform.localPosition = resetPos;
+            timer = 0f;
+        }
     }
 }

@@ -2,19 +2,19 @@ using UnityEngine;
 
 public class Flashlight : MonoBehaviour
 {
-    [Header("Fener Ayarları")]
+    [Header("Flashlight Settings")]
     [SerializeField] private Light flashlight;
     [SerializeField] private float maxBatteryLife = 100f;
     [SerializeField] private float batteryDrainRate = 5f; 
     [SerializeField] private float minIntensity = 0.5f;
     [SerializeField] private float maxIntensity = 3f;
     
-    [Header("Titreşim Efekti")]
+    [Header("Flicker Effect")]
     [SerializeField] private bool enableFlicker = true;
     [SerializeField] private float flickerThreshold = 20f; 
     [SerializeField] private float flickerSpeed = 0.1f;
     
-    [Header("Ses")]
+    [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip toggleSound;
     [SerializeField] private AudioClip lowBatterySound;

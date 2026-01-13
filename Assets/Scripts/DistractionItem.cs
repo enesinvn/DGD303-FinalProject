@@ -2,29 +2,29 @@ using UnityEngine;
 
 public class DistractionItem : MonoBehaviour, IInteractable
 {
-    [Header("Dikkat Dağıtma Ayarları")]
+    [Header("Distraction Settings")]
     [SerializeField] private float distractionRadius = 15f;
-    [SerializeField] private float distractionDuration = 5f; // NPC ne kadar süre oraya gider
+    [SerializeField] private float distractionDuration = 5f;
     [SerializeField] private float soundIntensity = 1f;
     
-    [Header("Fırlatma")]
+    [Header("Throwing")]
     [SerializeField] private bool canThrow = true;
     [SerializeField] private float throwForce = 10f;
     [SerializeField] private float throwUpwardForce = 2f;
     
-    [Header("Ses")]
+    [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip throwSound;
     [SerializeField] private AudioClip impactSound;
     
-    [Header("Görsel")]
+    [Header("Visual")]
     [SerializeField] private GameObject impactEffect;
     
     [Header("Layer")]
     [SerializeField] private LayerMask enemyLayer;
     
     private Rigidbody rb;
-    private bool isThrown = false;
+    public bool isThrown = false;
     private Vector3 throwPosition;
     
     void Start()
@@ -53,7 +53,6 @@ public class DistractionItem : MonoBehaviour, IInteractable
         }
         else
         {
-            // Yerdeyse tekrar al
             PickupItem();
         }
     }
@@ -66,7 +65,6 @@ public class DistractionItem : MonoBehaviour, IInteractable
         Transform playerCamera = player.GetComponentInChildren<Camera>()?.transform;
         if (playerCamera == null) return;
         
-        // Fırlat
         if (rb != null)
         {
             rb.isKinematic = false;
@@ -77,7 +75,6 @@ public class DistractionItem : MonoBehaviour, IInteractable
         isThrown = true;
         throwPosition = transform.position;
         
-        // Ses çıkar
         PlayerSoundController soundController = player.GetComponent<PlayerSoundController>();
         if (soundController != null)
         {
@@ -89,7 +86,6 @@ public class DistractionItem : MonoBehaviour, IInteractable
             audioSource.PlayOneShot(throwSound);
         }
         
-        // Collider'ı etkinleştir (çarpışma için)
         Collider col = GetComponent<Collider>();
         if (col != null)
         {
@@ -99,40 +95,56 @@ public class DistractionItem : MonoBehaviour, IInteractable
     
     void PickupItem()
     {
-        // Envantere ekle (ileride)
         InventorySystem inventory = FindFirstObjectByType<InventorySystem>();
-        if (inventory != null)
+        if (inventory != null && !inventory.IsInventoryFull())
         {
-            // Envantere eklenebilir
+            bool added = inventory.AddItem(
+                gameObject.name, 
+                "Distraction item - Can be thrown to redirect NPCs", 
+                null,
+                ItemType.Distraction, 
+                1, 
+                true
+            );
+            
+            if (added)
+            {
+                Debug.Log($"{gameObject.name} added to inventory!");
+                Destroy(gameObject);
+                return;
+            }
         }
         
-        Destroy(gameObject);
+        if (!isThrown)
+        {
+            ThrowItem();
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
     
     void OnCollisionEnter(Collision collision)
     {
         if (isThrown && collision.contacts.Length > 0)
         {
-            // Yere çarptı - dikkat dağıt
             CreateDistraction(collision.contacts[0].point);
         }
     }
     
     void CreateDistraction(Vector3 position)
     {
-        // Ses çıkar
         if (audioSource != null && impactSound != null)
         {
             audioSource.PlayOneShot(impactSound);
         }
         
-        // Görsel efekt
         if (impactEffect != null)
         {
             Instantiate(impactEffect, position, Quaternion.identity);
         }
         
-        // NPC'lere ses sinyali gönder
         Collider[] enemies = Physics.OverlapSphere(position, distractionRadius, enemyLayer);
         
         foreach (Collider enemy in enemies)
@@ -140,7 +152,6 @@ public class DistractionItem : MonoBehaviour, IInteractable
             EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
             if (enemyAI != null)
             {
-                // NPC'yi ses kaynağına gönder
                 float distance = Vector3.Distance(position, enemy.transform.position);
                 float normalizedDistance = distance / distractionRadius;
                 float soundStrength = (1f - normalizedDistance) * soundIntensity;
@@ -149,7 +160,6 @@ public class DistractionItem : MonoBehaviour, IInteractable
             }
         }
         
-        // SoundEmitter ekle (sürekli ses için)
         SoundEmitter emitter = gameObject.AddComponent<SoundEmitter>();
         if (emitter != null)
         {
@@ -160,9 +170,8 @@ public class DistractionItem : MonoBehaviour, IInteractable
             emitter.EmitSound(soundIntensity);
         }
         
-        Debug.Log($"Dikkat dağıtıcı aktif: {distractionDuration} saniye");
+        Debug.Log($"Distraction active: {distractionDuration} seconds");
         
-        // Belirli süre sonra yok et
         Destroy(gameObject, distractionDuration + 1f);
     }
     

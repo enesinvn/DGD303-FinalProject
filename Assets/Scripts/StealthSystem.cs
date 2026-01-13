@@ -2,20 +2,20 @@ using UnityEngine;
 
 public class StealthSystem : MonoBehaviour
 {
-    [Header("Gizlilik Ayarları")]
-    [SerializeField] private float stealthLevel = 1f; // 0-1 arası (1 = tamamen görünür, 0 = tamamen gizli)
-    [SerializeField] private float detectionRisk = 0f; // 0-1 arası (1 = kesinlikle görülecek)
+    [Header("Stealth Settings")]
+    [SerializeField] private float stealthLevel = 1f;
+    [SerializeField] private float detectionRisk = 0f;
     
-    [Header("Işık/Gölge")]
+    [Header("Light/Shadow")]
     [SerializeField] private bool useLightSystem = true;
     [SerializeField] private float lightCheckRadius = 1f;
     [SerializeField] private LayerMask lightLayer;
     
-    [Header("Hareket Modifier")]
-    [SerializeField] private float crouchStealthBonus = 0.3f; // Eğilince gizlilik artar
-    [SerializeField] private float sprintStealthPenalty = 0.5f; // Koşunca gizlilik azalır
+    [Header("Movement Modifier")]
+    [SerializeField] private float crouchStealthBonus = 0.3f;
+    [SerializeField] private float sprintStealthPenalty = 0.5f;
     
-    [Header("Referanslar")]
+    [Header("References")]
     [SerializeField] private CharacterController characterController;
     [SerializeField] private PlayerController playerController;
     [SerializeField] private PlayerHiding playerHiding;
@@ -55,10 +55,8 @@ public class StealthSystem : MonoBehaviour
     
     void CalculateStealthLevel()
     {
-        // Başlangıç değeri
         float baseStealth = 1f;
         
-        // Saklanıyorsa tamamen gizli
         if (playerHiding != null && playerHiding.IsHiding())
         {
             stealthLevel = 0f;
@@ -66,31 +64,32 @@ public class StealthSystem : MonoBehaviour
             return;
         }
         
-        // Işık kontrolü
         if (useLightSystem)
         {
             bool isInLight = CheckIfInLight();
             if (isInLight)
             {
-                baseStealth = 1f; // Işıkta tamamen görünür
+                baseStealth = 1f;
             }
             else
             {
-                baseStealth = 0.3f; // Karanlıkta daha gizli
+                baseStealth = 0.3f;
             }
         }
         
-        // Fener kontrolü
         if (flashlight != null && flashlight.IsOn())
         {
-            baseStealth = 1f; // Fener açıksa tamamen görünür
+            baseStealth = 1f;
         }
         
-        // Hareket modifikasyonu
-        if (characterController != null)
+        if (characterController != null && characterController.enabled)
         {
             float speed = characterController.velocity.magnitude;
-            float maxSpeed = 6f; // Sprint hızı
+            float maxSpeed = 6f;
+            if (playerController != null)
+            {
+                maxSpeed = playerController.SprintSpeed;
+            }
             
             if (speed > 0.1f)
             {
@@ -99,29 +98,25 @@ public class StealthSystem : MonoBehaviour
                 
                 if (isCrouching)
                 {
-                    baseStealth -= crouchStealthBonus; // Eğilince daha gizli
+                    baseStealth -= crouchStealthBonus;
                 }
                 else if (isSprinting)
                 {
-                    baseStealth += sprintStealthPenalty; // Koşunca daha görünür
+                    baseStealth += sprintStealthPenalty;
                 }
                 
-                // Hız bazlı modifier
                 float speedRatio = speed / maxSpeed;
-                baseStealth += speedRatio * 0.2f; // Hızlı hareket görünürlüğü artırır
+                baseStealth += speedRatio * 0.2f;
             }
         }
         
-        // Değerleri sınırla
         stealthLevel = Mathf.Clamp01(baseStealth);
         
-        // Detection risk hesapla (stealth level'in tersi)
         detectionRisk = stealthLevel;
     }
     
     bool CheckIfInLight()
     {
-        // Basit bir ışık kontrolü (ileride daha gelişmiş yapılabilir)
         Collider[] lights = Physics.OverlapSphere(transform.position, lightCheckRadius, lightLayer);
         return lights.Length > 0;
     }
@@ -130,10 +125,9 @@ public class StealthSystem : MonoBehaviour
     {
         if (stealthIndicator != null)
         {
-            // UI güncellemesi (örnek: gizlilik çubuğu)
-            // Burada UI güncellemesi yapılabilir
         }
     }
+    
     
     public float GetStealthLevel()
     {

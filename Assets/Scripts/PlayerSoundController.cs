@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 
 public class PlayerSoundController : MonoBehaviour
 {
-    [Header("Ses Ayarları")]
+    [Header("Sound Settings")]
     [SerializeField] private float walkSoundRadius = 5f;
     [SerializeField] private float sprintSoundRadius = 15f;
     [SerializeField] private float crouchSoundRadius = 2f;
@@ -11,12 +11,12 @@ public class PlayerSoundController : MonoBehaviour
     [SerializeField] private float sprintSoundIntensity = 1f;
     [SerializeField] private float crouchSoundIntensity = 0.1f;
     
-    [Header("Ses Çıkarma Aralıkları")]
+    [Header("Sound Emission Intervals")]
     [SerializeField] private float walkSoundInterval = 0.6f;
     [SerializeField] private float sprintSoundInterval = 0.4f;
     [SerializeField] private float crouchSoundInterval = 1f;
     
-    [Header("Referanslar")]
+    [Header("References")]
     [SerializeField] private CharacterController characterController;
     [SerializeField] private PlayerController playerController;
     [SerializeField] private PlayerHiding playerHiding;
@@ -24,6 +24,9 @@ public class PlayerSoundController : MonoBehaviour
     
     [Header("Layer")]
     [SerializeField] private LayerMask enemyLayer;
+    
+    [Header("Debug/Test")]
+    [SerializeField] private bool enableDebugControls = false;
     
     private float nextSoundTime = 0f;
     private bool wasMoving = false;
@@ -47,15 +50,31 @@ public class PlayerSoundController : MonoBehaviour
         
         if (soundEmitter == null)
         {
-            soundEmitter = gameObject.AddComponent<SoundEmitter>();
+            soundEmitter = GetComponent<SoundEmitter>();
         }
         
-        // SoundEmitter ayarları
+        if (soundEmitter == null)
+        {
+            soundEmitter = gameObject.AddComponent<SoundEmitter>();
+            Debug.Log("[PlayerSoundController] SoundEmitter automatically added!");
+        }
+        else
+        {
+            Debug.Log("[PlayerSoundController] SoundEmitter already exists.");
+        }
+        
         if (soundEmitter != null)
         {
             soundEmitter.soundRadius = sprintSoundRadius;
             soundEmitter.soundType = SoundEmitter.SoundType.Footstep;
             soundEmitter.isContinuous = false;
+            soundEmitter.showDebugVisuals = false;
+            soundEmitter.SetEnemyLayer(enemyLayer);
+            Debug.Log("[PlayerSoundController] SoundEmitter configured!");
+        }
+        else
+        {
+            Debug.LogError("[PlayerSoundController] SoundEmitter could not be added!");
         }
     }
     
@@ -63,11 +82,31 @@ public class PlayerSoundController : MonoBehaviour
     {
         if (playerHiding != null && playerHiding.IsHiding())
         {
-            // Saklanırken ses çıkarma
             return;
         }
         
         HandleFootstepSounds();
+        
+        if (enableDebugControls && Keyboard.current != null)
+        {
+            if (Keyboard.current.tKey.wasPressedThisFrame)
+            {
+                Debug.Log("[PlayerSoundController] Test sound emitted (Footstep)");
+                EmitFootstepSound(sprintSoundRadius, sprintSoundIntensity);
+            }
+            
+            if (Keyboard.current.yKey.wasPressedThisFrame)
+            {
+                Debug.Log("[PlayerSoundController] Test sound emitted (Interaction)");
+                EmitInteractionSound(0.8f);
+            }
+            
+            if (Keyboard.current.uKey.wasPressedThisFrame)
+            {
+                Debug.Log("[PlayerSoundController] Test sound emitted (Throw)");
+                EmitThrowSound(1f);
+            }
+        }
     }
     
     void HandleFootstepSounds()
@@ -79,7 +118,6 @@ public class PlayerSoundController : MonoBehaviour
         
         if (isMoving && isGrounded && Time.time >= nextSoundTime)
         {
-            // Hareket tipine göre ses çıkar
             bool isSprinting = Input.GetKey(KeyCode.LeftShift);
             bool isCrouching = Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.LeftControl);
             
@@ -106,7 +144,6 @@ public class PlayerSoundController : MonoBehaviour
                 soundInterval = walkSoundInterval;
             }
             
-            // Ses yay
             EmitFootstepSound(soundRadius, soundIntensity);
             
             nextSoundTime = Time.time + soundInterval;
@@ -117,19 +154,31 @@ public class PlayerSoundController : MonoBehaviour
     
     void EmitFootstepSound(float radius, float intensity)
     {
-        if (soundEmitter == null) return;
+        if (soundEmitter == null)
+        {
+            soundEmitter = GetComponent<SoundEmitter>();
+        }
         
-        // SoundEmitter ayarlarını güncelle
+        if (soundEmitter == null)
+        {
+            Debug.LogWarning("[PlayerSoundController] SoundEmitter not found! Cannot emit sound.");
+            return;
+        }
+        
         soundEmitter.soundRadius = radius;
         soundEmitter.soundIntensity = intensity;
         soundEmitter.soundType = SoundEmitter.SoundType.Footstep;
         
-        // Ses yay
         soundEmitter.EmitSound(intensity);
     }
     
     public void EmitInteractionSound(float intensity = 0.5f)
     {
+        if (soundEmitter == null)
+        {
+            soundEmitter = GetComponent<SoundEmitter>();
+        }
+        
         if (soundEmitter == null) return;
         
         soundEmitter.soundType = SoundEmitter.SoundType.Interaction;
@@ -139,6 +188,11 @@ public class PlayerSoundController : MonoBehaviour
     
     public void EmitItemPickupSound(float intensity = 0.3f)
     {
+        if (soundEmitter == null)
+        {
+            soundEmitter = GetComponent<SoundEmitter>();
+        }
+        
         if (soundEmitter == null) return;
         
         soundEmitter.soundType = SoundEmitter.SoundType.ItemPickup;
@@ -148,6 +202,11 @@ public class PlayerSoundController : MonoBehaviour
     
     public void EmitThrowSound(float intensity = 1f)
     {
+        if (soundEmitter == null)
+        {
+            soundEmitter = GetComponent<SoundEmitter>();
+        }
+        
         if (soundEmitter == null) return;
         
         soundEmitter.soundType = SoundEmitter.SoundType.Throw;

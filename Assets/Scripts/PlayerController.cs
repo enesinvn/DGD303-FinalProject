@@ -3,13 +3,16 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    [Header("Hareket Ayarları")]
+    [Header("Movement Settings")]
     [SerializeField] private float walkSpeed = 3f;
     [SerializeField] private float sprintSpeed = 6f;
     [SerializeField] private float crouchWalkSpeed = 1.5f;
     [SerializeField] private float gravity = -9.81f;
     
-    [Header("Kamera Ayarları")]
+    public float SprintSpeed { get { return sprintSpeed; } }
+    public float WalkSpeed { get { return walkSpeed; } }
+    
+    [Header("Camera Settings")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private float mouseSensitivity = 2f;
     [SerializeField] private float maxLookAngle = 80f;
@@ -20,20 +23,20 @@ public class PlayerController : MonoBehaviour
         set { mouseSensitivity = Mathf.Clamp(value, 0.1f, 10f); } 
     }
     
-    [Header("Eğilme Ayarları")]
+    [Header("Crouch Settings")]
     [SerializeField] private float standingHeight = 2f;
     [SerializeField] private float crouchHeight = 1f;
     [SerializeField] private float crouchTransitionSpeed = 5f;
     
-    [Header("Ses Ayarları")]
+    [Header("Audio Settings")]
     [SerializeField] private AudioSource footstepAudioSource;
     [SerializeField] private AudioClip[] footstepSounds;
     [SerializeField] private float footstepInterval = 0.5f;
 
-    [Header("Stamina Referansı")]
+    [Header("Stamina Reference")]
     [SerializeField] private StaminaSystem staminaSystem;
     
-    [Header("Saklanma Referansı")]
+    [Header("Hiding Reference")]
     [SerializeField] private PlayerHiding playerHiding;
     
     private CharacterController characterController;
@@ -44,6 +47,9 @@ public class PlayerController : MonoBehaviour
     private float nextFootstepTime;
     private Vector3 initialCameraPosition;
     
+    // Public property for UI
+    public bool IsCrouching { get { return isCrouching; } }
+    
     void Start()
     {
         characterController = GetComponent<CharacterController>();
@@ -53,7 +59,7 @@ public class PlayerController : MonoBehaviour
         
         if (cameraTransform == null)
         {
-            Debug.LogWarning("Kamera transform atanmamış! Main Camera'yı cameraTransform'a sürükleyin.");
+            Debug.LogWarning("Camera transform not assigned! Drag Main Camera to cameraTransform.");
         }
         else
         {
@@ -63,6 +69,13 @@ public class PlayerController : MonoBehaviour
     
     void Update()
     {
+        if (!enabled) return;
+        
+        if (playerHiding != null && playerHiding.IsHiding())
+        {
+            return;
+        }
+        
         HandleMovement();
         HandleCamera();
         HandleCrouch();
@@ -85,8 +98,16 @@ public class PlayerController : MonoBehaviour
     
     void HandleMovement()
     {
-        // Saklanıyorsa hareket etme
         if (playerHiding != null && playerHiding.IsHiding())
+        {
+            if (characterController != null && characterController.enabled)
+            {
+                characterController.Move(Vector3.zero);
+            }
+            return;
+        }
+        
+        if (characterController == null || !characterController.enabled)
         {
             return;
         }
@@ -140,6 +161,11 @@ public class PlayerController : MonoBehaviour
     
     void HandleCrouch()
     {
+        if (characterController == null || !characterController.enabled)
+        {
+            return;
+        }
+        
         if (Keyboard.current != null)
         {
             if (Keyboard.current.cKey.wasPressedThisFrame || 
@@ -163,6 +189,11 @@ public class PlayerController : MonoBehaviour
     
     void HandleFootsteps()
     {
+        if (characterController == null || !characterController.enabled)
+        {
+            return;
+        }
+        
         if (characterController.isGrounded && characterController.velocity.magnitude > 0.1f)
         {
             if (Time.time >= nextFootstepTime)

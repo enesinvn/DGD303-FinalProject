@@ -4,7 +4,7 @@ using TMPro;
 
 public class SaveLoadUI : MonoBehaviour
 {
-    [Header("Butonlar")]
+    [Header("Buttons")]
     [SerializeField] private Button saveButton;
     [SerializeField] private Button loadButton;
     [SerializeField] private Button deleteSaveButton;
@@ -16,7 +16,6 @@ public class SaveLoadUI : MonoBehaviour
     
     private void Start()
     {
-        // Buton event'lerini bağla
         if (saveButton != null)
             saveButton.onClick.AddListener(SaveGame);
             
@@ -26,10 +25,8 @@ public class SaveLoadUI : MonoBehaviour
         if (deleteSaveButton != null)
             deleteSaveButton.onClick.AddListener(DeleteSave);
             
-        // Kayıt varsa Load butonunu aktif et
         UpdateLoadButtonState();
         
-        // Bildirim gizle
         if (saveNotification != null)
             saveNotification.SetActive(false);
     }
@@ -39,11 +36,11 @@ public class SaveLoadUI : MonoBehaviour
         if (SaveSystem.Instance != null)
         {
             SaveSystem.Instance.SaveGame();
-            ShowNotification("Oyun kaydedildi!");
+            ShowNotification("Game saved!");
         }
         else
         {
-            Debug.LogWarning("SaveSystem bulunamadı!");
+            Debug.LogWarning("SaveSystem not found!");
         }
     }
     
@@ -54,9 +51,8 @@ public class SaveLoadUI : MonoBehaviour
             bool success = SaveSystem.Instance.LoadGame();
             if (success)
             {
-                ShowNotification("Oyun yüklendi!");
+                ShowNotification("Game loaded!");
                 
-                // GameManager varsa resume yap
                 if (GameManager.Instance != null)
                 {
                     GameManager.Instance.ResumeGame();
@@ -64,12 +60,12 @@ public class SaveLoadUI : MonoBehaviour
             }
             else
             {
-                ShowNotification("Kayıt dosyası bulunamadı!");
+                ShowNotification("Save file not found!");
             }
         }
         else
         {
-            Debug.LogWarning("SaveSystem bulunamadı!");
+            Debug.LogWarning("SaveSystem not found!");
         }
     }
     
@@ -79,7 +75,7 @@ public class SaveLoadUI : MonoBehaviour
         {
             SaveSystem.Instance.DeleteSaveFile();
             UpdateLoadButtonState();
-            ShowNotification("Kayıt silindi!");
+            ShowNotification("Save deleted!");
         }
     }
     
@@ -102,7 +98,6 @@ public class SaveLoadUI : MonoBehaviour
             
             saveNotification.SetActive(true);
             
-            // Belirli süre sonra gizle
             CancelInvoke(nameof(HideNotification));
             Invoke(nameof(HideNotification), notificationDuration);
         }
@@ -115,7 +110,6 @@ public class SaveLoadUI : MonoBehaviour
             saveNotification.SetActive(false);
     }
     
-    // Dışarıdan çağrılabilir - UI güncellemesi için
     public void RefreshUI()
     {
         UpdateLoadButtonState();

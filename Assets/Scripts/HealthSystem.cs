@@ -2,21 +2,21 @@ using UnityEngine;
 
 public class HealthSystem : MonoBehaviour
 {
-    [Header("Sağlık Ayarları")]
+    [Header("Health Settings")]
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth;
     [SerializeField] private bool isDead = false;
     
-    [Header("Hasar Ayarları")]
+    [Header("Damage Settings")]
     [SerializeField] private float invincibilityDuration = 1f;
     private float invincibilityTimer = 0f;
     
-    [Header("Ses Referansı")]
+    [Header("Audio Reference")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip hurtSound;
     [SerializeField] private AudioClip deathSound;
     
-    [Header("UI Referansı")]
+    [Header("UI Reference")]
     [SerializeField] private UIManager uiManager;
     
     public delegate void HealthChangedDelegate(float currentHealth, float maxHealth);
@@ -89,7 +89,7 @@ public class HealthSystem : MonoBehaviour
         
         OnDeath?.Invoke();
         
-        Debug.Log("Oyuncu öldü!");
+        Debug.Log("Player died!");
     }
     
     public void Respawn()

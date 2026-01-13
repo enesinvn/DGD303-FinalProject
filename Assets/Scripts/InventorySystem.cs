@@ -24,26 +24,26 @@ public class InventoryItem
 
 public enum ItemType
 {
-    Key,           // Anahtar
-    Battery,       // Batarya
-    HealthPack,    // Sağlık paketi
-    Distraction,   // Dikkat dağıtıcı
-    Tool,          // Alet
-    QuestItem,     // Görev eşyası
-    Misc           // Diğer
+    Key,
+    Battery,
+    HealthPack,
+    Distraction,
+    Tool,
+    QuestItem,
+    Misc
 }
 
 public class InventorySystem : MonoBehaviour
 {
-    [Header("Envanter Ayarları")]
-    [SerializeField] private int maxSlots = 12;
+    [Header("Inventory Settings")]
+    public int maxSlots = 12;
     [SerializeField] private List<InventoryItem> inventory = new List<InventoryItem>();
     
     [Header("UI")]
     [SerializeField] private GameObject inventoryUI;
     [SerializeField] private bool isInventoryOpen = false;
     
-    [Header("Referanslar")]
+    [Header("References")]
     [SerializeField] private Flashlight flashlight;
     [SerializeField] private HealthSystem healthSystem;
     
@@ -70,7 +70,6 @@ public class InventorySystem : MonoBehaviour
     
     void Update()
     {
-        // Tab tuşu ile envanter aç/kapa
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             ToggleInventory();
@@ -79,30 +78,27 @@ public class InventorySystem : MonoBehaviour
     
     public bool AddItem(string itemName, string description, Sprite icon, ItemType type, int quantity = 1, bool usable = false)
     {
-        // Aynı eşya varsa miktarını artır
         InventoryItem existingItem = inventory.Find(item => item.itemName == itemName && item.itemType == type);
         
         if (existingItem != null)
         {
             existingItem.quantity += quantity;
             OnInventoryChanged?.Invoke();
-            Debug.Log($"{itemName} eklendi (Toplam: {existingItem.quantity})");
+            Debug.Log($"{itemName} added (Total: {existingItem.quantity})");
             return true;
         }
         
-        // Envanter dolu mu kontrol et
         if (inventory.Count >= maxSlots)
         {
-            Debug.LogWarning("Envanter dolu!");
+            Debug.LogWarning("Inventory full!");
             return false;
         }
         
-        // Yeni eşya ekle
         InventoryItem newItem = new InventoryItem(itemName, description, icon, type, quantity, usable);
         inventory.Add(newItem);
         
         OnInventoryChanged?.Invoke();
-        Debug.Log($"{itemName} envantere eklendi!");
+        Debug.Log($"{itemName} added to inventory!");
         
         return true;
     }
@@ -155,7 +151,7 @@ public class InventorySystem : MonoBehaviour
             case ItemType.Battery:
                 if (flashlight != null)
                 {
-                    flashlight.RechargeBattery(50f); // %50 şarj
+                    flashlight.RechargeBattery(50f);
                     used = true;
                 }
                 break;
@@ -163,21 +159,20 @@ public class InventorySystem : MonoBehaviour
             case ItemType.HealthPack:
                 if (healthSystem != null)
                 {
-                    healthSystem.Heal(30f); // 30 HP
+                    healthSystem.Heal(30f);
                     used = true;
                 }
                 break;
                 
             case ItemType.Distraction:
-                // Distraction sistemi eklendiğinde kullanılacak
-                used = true;
+                used = UseDistractionItem(itemName);
                 break;
         }
         
         if (used)
         {
             RemoveItem(itemName, 1);
-            Debug.Log($"{itemName} kullanıldı!");
+            Debug.Log($"{itemName} used!");
         }
         
         return used;
@@ -192,9 +187,9 @@ public class InventorySystem : MonoBehaviour
             inventoryUI.SetActive(isInventoryOpen);
         }
         
-        // Mouse kontrolü
         if (isInventoryOpen)
         {
+            OnInventoryChanged?.Invoke();
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
@@ -203,6 +198,8 @@ public class InventorySystem : MonoBehaviour
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
+        
+        Debug.Log($"Inventory {(isInventoryOpen ? "opened" : "closed")}");
     }
     
     public List<InventoryItem> GetInventory()
@@ -223,6 +220,55 @@ public class InventorySystem : MonoBehaviour
     public bool IsInventoryOpen()
     {
         return isInventoryOpen;
+    }
+    
+    bool UseDistractionItem(string itemName)
+    {
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player == null) return false;
+        
+        Transform playerCamera = player.GetComponentInChildren<Camera>()?.transform;
+        if (playerCamera == null) return false;
+        
+        GameObject distractionObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        distractionObj.name = itemName;
+        distractionObj.transform.position = playerCamera.position + playerCamera.forward * 1f;
+        distractionObj.transform.localScale = Vector3.one * 0.3f;
+        
+        DistractionItem distractionItem = distractionObj.AddComponent<DistractionItem>();
+        if (distractionItem != null)
+        {
+            Rigidbody rb = distractionObj.GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                rb = distractionObj.AddComponent<Rigidbody>();
+            }
+            rb.mass = 0.5f;
+            rb.isKinematic = false;
+            
+            Vector3 throwDirection = playerCamera.forward;
+            rb.AddForce(throwDirection * 10f + Vector3.up * 2f, ForceMode.Impulse);
+            
+            Collider col = distractionObj.GetComponent<Collider>();
+            if (col != null)
+            {
+                col.isTrigger = false;
+            }
+            
+            distractionItem.isThrown = true;
+            
+            PlayerSoundController soundController = player.GetComponent<PlayerSoundController>();
+            if (soundController != null)
+            {
+                soundController.EmitThrowSound(0.8f);
+            }
+            
+            Debug.Log($"{itemName} thrown!");
+            return true;
+        }
+        
+        Destroy(distractionObj);
+        return false;
     }
 }
 

@@ -5,7 +5,7 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
     
-    [Header("Oyun Durumu")]
+    [Header("Game State")]
     [SerializeField] private bool isPaused = false;
     [SerializeField] private bool gameOver = false;
     
@@ -13,7 +13,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject pauseMenu;
     [SerializeField] private GameObject gameOverMenu;
     
-    [Header("Referanslar")]
+    [Header("References")]
     [SerializeField] private PlayerController playerController;
     [SerializeField] private HealthSystem playerHealth;
     
@@ -55,24 +55,21 @@ public class GameManager : MonoBehaviour
             TogglePause();
         }
         
-        // F5 ile kaydet
         if (Input.GetKeyDown(KeyCode.F5))
         {
             if (SaveSystem.Instance != null && !isPaused && !gameOver)
             {
                 SaveSystem.Instance.SaveGame();
-                Debug.Log("Oyun kaydedildi! (F5)");
+                Debug.Log("Game saved! (F5)");
                 
-                // UI bildirimi göster
                 SaveLoadUI saveLoadUI = FindFirstObjectByType<SaveLoadUI>();
                 if (saveLoadUI != null)
                 {
-                    saveLoadUI.ShowNotification("Oyun kaydedildi! (F5)");
+                    saveLoadUI.ShowNotification("Game saved! (F5)");
                 }
             }
         }
         
-        // F9 ile yükle
         if (Input.GetKeyDown(KeyCode.F9))
         {
             if (SaveSystem.Instance != null && !isPaused && !gameOver)
@@ -80,21 +77,19 @@ public class GameManager : MonoBehaviour
                 bool success = SaveSystem.Instance.LoadGame();
                 if (success)
                 {
-                    Debug.Log("Oyun yüklendi! (F9)");
+                    Debug.Log("Game loaded! (F9)");
                     
-                    // UI bildirimi göster
                     SaveLoadUI saveLoadUI = FindFirstObjectByType<SaveLoadUI>();
                     if (saveLoadUI != null)
                     {
-                        saveLoadUI.ShowNotification("Oyun yüklendi! (F9)");
+                        saveLoadUI.ShowNotification("Game loaded! (F9)");
                     }
                     
-                    // Oyunu devam ettir
                     ResumeGame();
                 }
                 else
                 {
-                    Debug.LogWarning("Kayıt dosyası bulunamadı!");
+                    Debug.LogWarning("Save file not found!");
                 }
             }
         }

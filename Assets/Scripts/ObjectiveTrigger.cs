@@ -2,12 +2,12 @@ using UnityEngine;
 
 public class ObjectiveTrigger : MonoBehaviour
 {
-    [Header("Görev Ayarları")]
+    [Header("Objective Settings")]
     [SerializeField] private string objectiveID;
     [SerializeField] private bool completeOnEnter = true;
     [SerializeField] private bool oneTimeOnly = true;
     
-    [Header("Referanslar")]
+    [Header("References")]
     [SerializeField] private ObjectiveSystem objectiveSystem;
     
     private bool hasTriggered = false;

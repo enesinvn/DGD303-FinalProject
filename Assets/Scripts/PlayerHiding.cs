@@ -3,43 +3,46 @@ using UnityEngine.InputSystem;
 
 public class PlayerHiding : MonoBehaviour
 {
-    [Header("Saklanma Ayarları")]
-    [SerializeField] private bool isHiding = false;
-    [SerializeField] private HidingSpot currentHidingSpot;
+    [Header("Hiding Settings")]
+    [SerializeField] private LayerMask hidingSpotLayer;
     
-    [Header("Nefes Tutma")]
-    [SerializeField] private bool isHoldingBreath = false;
-    [SerializeField] private float breathHoldStaminaCost = 15f; // Saniyede azalan stamina
-    [SerializeField] private float minStaminaToHoldBreath = 10f; // Nefes tutmak için minimum stamina
+    [Header("Camera Settings")]
+    [SerializeField] private Transform playerCamera;
     
-    [Header("Referanslar")]
-    [SerializeField] private PlayerController playerController;
-    [SerializeField] private StaminaSystem staminaSystem;
+    [Header("Breath Holding System")]
+    [SerializeField] private float maxBreathHoldTime = 10f;
+    [SerializeField] private float breathRecoveryRate = 1f;
+    [SerializeField] private KeyCode holdBreathKey = KeyCode.Space;
+    
+    [Header("UI (Optional)")]
+    [SerializeField] private UnityEngine.UI.Image breathBar;
+    [SerializeField] private GameObject breathHoldPrompt;
+    
+    [Header("Audio (Optional)")]
+    [SerializeField] private AudioSource breathingAudioSource;
+    [SerializeField] private AudioClip normalBreathingSound;
+    [SerializeField] private AudioClip holdingBreathSound;
+    [SerializeField] private AudioClip gaspingSound;
+    
+    [Header("Movement Control")]
     [SerializeField] private CharacterController characterController;
-    [SerializeField] private Camera playerCamera;
+    [SerializeField] private PlayerController playerController;
+    [SerializeField] private Flashlight flashlight;
     
-    [Header("UI")]
-    [SerializeField] private GameObject hidingUI;
-    [SerializeField] private GameObject breathHoldUI;
+    private bool isHiding = false;
+    private HidingSpot currentHidingSpot;
+    private Vector3 originalCameraPosition;
+    private Quaternion originalCameraRotation;
+    private Vector3 originalPlayerPosition;
     
-    [Header("Ses")]
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip breathHoldSound;
-    [SerializeField] private AudioClip breathReleaseSound;
-    
-    private float originalWalkSpeed;
-    private float originalSprintSpeed;
+    private bool isHoldingBreath = false;
+    private float currentBreathTime;
     
     void Start()
     {
-        if (playerController == null)
+        if (playerCamera == null)
         {
-            playerController = GetComponent<PlayerController>();
-        }
-        
-        if (staminaSystem == null)
-        {
-            staminaSystem = GetComponent<StaminaSystem>();
+            playerCamera = GetComponentInChildren<Camera>()?.transform;
         }
         
         if (characterController == null)
@@ -47,25 +50,26 @@ public class PlayerHiding : MonoBehaviour
             characterController = GetComponent<CharacterController>();
         }
         
-        if (playerCamera == null)
+        if (playerController == null)
         {
-            playerCamera = GetComponentInChildren<Camera>();
+            playerController = GetComponent<PlayerController>();
         }
         
-        if (audioSource == null)
+        if (flashlight == null)
         {
-            audioSource = gameObject.AddComponent<AudioSource>();
+            flashlight = GetComponentInChildren<Flashlight>();
         }
         
-        // UI'ları gizle
-        if (hidingUI != null)
+        currentBreathTime = maxBreathHoldTime;
+        
+        if (breathHoldPrompt != null)
         {
-            hidingUI.SetActive(false);
+            breathHoldPrompt.SetActive(false);
         }
         
-        if (breathHoldUI != null)
+        if (breathBar != null)
         {
-            breathHoldUI.SetActive(false);
+            breathBar.gameObject.SetActive(false);
         }
     }
     
@@ -73,158 +77,84 @@ public class PlayerHiding : MonoBehaviour
     {
         if (isHiding)
         {
-            HandleHidingInput();
             HandleBreathHolding();
         }
-    }
-    
-    void HandleHidingInput()
-    {
-        // E tuşu ile çık
-        if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+        else
         {
-            if (currentHidingSpot != null)
+            if (currentBreathTime < maxBreathHoldTime)
             {
-                currentHidingSpot.Interact(); // Exit hiding
-            }
-        }
-        
-        // Nefes tut (Space veya Shift)
-        if (currentHidingSpot != null && currentHidingSpot.GetHidingType() != HidingSpot.HidingType.Corner)
-        {
-            if (Keyboard.current != null)
-            {
-                bool wantsToHoldBreath = Keyboard.current.spaceKey.isPressed || 
-                                        Keyboard.current.leftShiftKey.isPressed;
-                
-                if (wantsToHoldBreath && !isHoldingBreath && CanHoldBreath())
-                {
-                    StartBreathHolding();
-                }
-                else if (!wantsToHoldBreath && isHoldingBreath)
-                {
-                    StopBreathHolding();
-                }
+                currentBreathTime += breathRecoveryRate * Time.deltaTime;
+                currentBreathTime = Mathf.Min(currentBreathTime, maxBreathHoldTime);
             }
         }
     }
     
     void HandleBreathHolding()
     {
-        if (isHoldingBreath && staminaSystem != null)
+        bool wantsToHoldBreath = Input.GetKey(holdBreathKey);
+        
+        if (wantsToHoldBreath && currentBreathTime > 0)
         {
-            // Stamina azalt
-            float currentStamina = staminaSystem.GetCurrentStamina();
-            currentStamina -= breathHoldStaminaCost * Time.deltaTime;
-            
-            // Stamina bittiğinde nefes tutmayı bırak
-            if (currentStamina <= 0f)
+            if (!isHoldingBreath)
             {
-                StopBreathHolding();
+                isHoldingBreath = true;
+                PlayBreathSound(holdingBreathSound);
+                Debug.Log("[PlayerHiding] Started holding breath");
+            }
+            
+            currentBreathTime -= Time.deltaTime;
+            
+            if (currentBreathTime <= 0)
+            {
+                currentBreathTime = 0;
+                isHoldingBreath = false;
+                PlayBreathSound(gaspingSound);
+                Debug.Log("[PlayerHiding] Breath ran out! Forced to breathe");
             }
         }
+        else
+        {
+            if (isHoldingBreath)
+            {
+                isHoldingBreath = false;
+                PlayBreathSound(normalBreathingSound);
+                Debug.Log("[PlayerHiding] Stopped holding breath");
+            }
+            
+            if (currentBreathTime < maxBreathHoldTime)
+            {
+                currentBreathTime += breathRecoveryRate * Time.deltaTime;
+                currentBreathTime = Mathf.Min(currentBreathTime, maxBreathHoldTime);
+            }
+        }
+        
+        UpdateBreathUI();
     }
     
-    public void StartHiding(HidingSpot hidingSpot, bool requiresBreath, float breathDrainRate)
+    void UpdateBreathUI()
     {
-        isHiding = true;
-        currentHidingSpot = hidingSpot;
-        isHoldingBreath = false;
-        
-        // Hareketi durdur
-        if (characterController != null)
+        if (breathBar != null)
         {
-            characterController.enabled = false;
-        }
-        
-        // UI göster
-        if (hidingUI != null)
-        {
-            hidingUI.SetActive(true);
-        }
-        
-        // Kamera kontrolünü sınırla (opsiyonel)
-        if (playerCamera != null)
-        {
-            // Kamerayı sınırlayabilirsiniz
-        }
-        
-        Debug.Log("Saklanıyorsunuz! (E tuşu ile çıkın)");
-    }
-    
-    public void StopHiding()
-    {
-        isHiding = false;
-        currentHidingSpot = null;
-        isHoldingBreath = false;
-        
-        // Hareketi tekrar etkinleştir
-        if (characterController != null)
-        {
-            characterController.enabled = true;
-        }
-        
-        // UI gizle
-        if (hidingUI != null)
-        {
-            hidingUI.SetActive(false);
-        }
-        
-        if (breathHoldUI != null)
-        {
-            breathHoldUI.SetActive(false);
-        }
-        
-        Debug.Log("Saklanmayı bıraktınız!");
-    }
-    
-    void StartBreathHolding()
-    {
-        if (!CanHoldBreath()) return;
-        
-        isHoldingBreath = true;
-        
-        // UI göster
-        if (breathHoldUI != null)
-        {
-            breathHoldUI.SetActive(true);
-        }
-        
-        // Ses efekti
-        if (audioSource != null && breathHoldSound != null)
-        {
-            audioSource.PlayOneShot(breathHoldSound);
-        }
-        
-        Debug.Log("Nefes tutuyorsunuz...");
-    }
-    
-    void StopBreathHolding()
-    {
-        isHoldingBreath = false;
-        
-        // UI gizle
-        if (breathHoldUI != null)
-        {
-            breathHoldUI.SetActive(false);
-        }
-        
-        // Ses efekti
-        if (audioSource != null && breathReleaseSound != null)
-        {
-            audioSource.PlayOneShot(breathReleaseSound);
+            breathBar.fillAmount = currentBreathTime / maxBreathHoldTime;
         }
     }
     
-    bool CanHoldBreath()
+    void PlayBreathSound(AudioClip clip)
     {
-        if (staminaSystem == null) return false;
-        return staminaSystem.GetCurrentStamina() >= minStaminaToHoldBreath;
+        if (breathingAudioSource != null && clip != null)
+        {
+            breathingAudioSource.PlayOneShot(clip);
+        }
     }
     
-    public bool CanHide()
+    public bool IsHoldingBreath()
     {
-        return !isHiding;
+        return isHoldingBreath && isHiding;
+    }
+    
+    public HidingSpot GetCurrentHidingSpot()
+    {
+        return currentHidingSpot;
     }
     
     public bool IsHiding()
@@ -232,14 +162,156 @@ public class PlayerHiding : MonoBehaviour
         return isHiding;
     }
     
-    public bool IsHoldingBreath()
+    public float GetBreathPercentage()
     {
-        return isHoldingBreath;
+        return (currentBreathTime / maxBreathHoldTime) * 100f;
     }
     
-    public HidingSpot GetCurrentHidingSpot()
+    public void EnterHidingSpot(HidingSpot spot)
     {
-        return currentHidingSpot;
+        if (isHiding || spot == null) return;
+        
+        Debug.Log($"[PlayerHiding] Entering hiding spot: {spot.name}");
+        
+        currentHidingSpot = spot;
+        isHiding = true;
+        
+        if (breathHoldPrompt != null)
+        {
+            breathHoldPrompt.SetActive(true);
+        }
+        
+        if (breathBar != null)
+        {
+            breathBar.gameObject.SetActive(true);
+        }
+        
+        originalPlayerPosition = transform.position;
+        originalCameraPosition = playerCamera.localPosition;
+        originalCameraRotation = playerCamera.localRotation;
+        
+        if (playerController != null)
+        {
+            playerController.enabled = false;
+            Debug.Log("[PlayerHiding] PlayerController disabled");
+        }
+        
+        if (flashlight != null && flashlight.IsOn())
+        {
+            var toggleMethod = flashlight.GetType().GetMethod("ToggleFlashlight", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (toggleMethod != null)
+            {
+                toggleMethod.Invoke(flashlight, null);
+            }
+            Debug.Log("[PlayerHiding] Flashlight turned off");
+        }
+        
+        if (characterController != null)
+        {
+            characterController.enabled = false;
+        }
+        
+        transform.position = spot.GetPlayerPosition();
+        transform.rotation = spot.GetPlayerRotation();
+        
+        if (spot.HasCustomCameraPosition())
+        {
+            playerCamera.localPosition = spot.GetCameraOffset();
+            playerCamera.localRotation = Quaternion.Euler(spot.GetCameraRotation());
+        }
+        
+        if (characterController != null)
+        {
+            characterController.enabled = true;
+        }
+        
+        PlayBreathSound(normalBreathingSound);
+        
+        Debug.Log($"[PlayerHiding] Hiding complete. IsHiding: {isHiding}, Spot: {currentHidingSpot?.name ?? "null"}");
+    }
+    
+    public void ExitHidingSpot()
+    {
+        if (!isHiding || currentHidingSpot == null) 
+        {
+            Debug.LogWarning("[PlayerHiding] ExitHidingSpot called but not hiding!");
+            return;
+        }
+        
+        Debug.Log($"[PlayerHiding] Exiting hiding spot: {currentHidingSpot.name}");
+        
+        if (breathHoldPrompt != null)
+        {
+            breathHoldPrompt.SetActive(false);
+        }
+        
+        if (breathBar != null)
+        {
+            breathBar.gameObject.SetActive(false);
+        }
+        
+        isHoldingBreath = false;
+        
+        if (characterController != null)
+        {
+            characterController.enabled = false;
+        }
+        
+        Vector3 exitPosition = currentHidingSpot.GetExitPosition();
+        
+        if (characterController != null)
+        {
+            float groundOffset = characterController.height / 2f + characterController.skinWidth;
+            if (exitPosition.y < 1f)
+            {
+                exitPosition.y = groundOffset;
+            }
+        }
+        
+        Debug.Log($"[PlayerHiding] Exit position: {exitPosition}");
+        
+        transform.position = exitPosition;
+        
+        playerCamera.localPosition = originalCameraPosition;
+        playerCamera.localRotation = originalCameraRotation;
+        
+        if (characterController != null)
+        {
+            characterController.enabled = true;
+        }
+        
+        if (playerController != null)
+        {
+            playerController.enabled = true;
+            Debug.Log("[PlayerHiding] PlayerController enabled");
+        }
+        
+        HidingSpot spotToRelease = currentHidingSpot;
+        currentHidingSpot = null;
+        isHiding = false;
+        
+        spotToRelease.SetOccupied(false);
+        
+        Debug.Log($"[PlayerHiding] Exit complete. IsHiding: {isHiding}, Position: {transform.position}");
+    }
+    
+    void OnDrawGizmos()
+    {
+        if (isHiding && currentHidingSpot != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(transform.position, 0.5f);
+            
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(currentHidingSpot.GetExitPosition(), 0.3f);
+            Gizmos.DrawLine(transform.position, currentHidingSpot.GetExitPosition());
+            
+            if (isHoldingBreath)
+            {
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawWireSphere(transform.position + Vector3.up * 2, 0.2f);
+            }
+        }
     }
 }
-

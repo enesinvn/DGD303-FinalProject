@@ -2,16 +2,16 @@ using UnityEngine;
 
 public class Checkpoint : MonoBehaviour
 {
-    [Header("Görsel Efektler")]
+    [Header("Visual Effects")]
     [SerializeField] private GameObject checkpointIndicator;
     [SerializeField] private Light checkpointLight;
     [SerializeField] private ParticleSystem checkpointParticles;
     
-    [Header("Ses")]
+    [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip checkpointSound;
     
-    [Header("Ayarlar")]
+    [Header("Settings")]
     [SerializeField] private bool autoSave = true;
     [SerializeField] private bool showNotification = true;
     
@@ -53,20 +53,17 @@ public class Checkpoint : MonoBehaviour
     {
         isActivated = true;
         
-        // Otomatik kayıt
         if (autoSave && SaveSystem.Instance != null)
         {
             SaveSystem.Instance.SaveGame();
-            Debug.Log("Checkpoint'e ulaşıldı! Oyun kaydedildi.");
+            Debug.Log("Checkpoint reached! Game saved.");
         }
         
-        // Görsel feedback
         if (checkpointIndicator != null)
         {
             checkpointIndicator.SetActive(true);
         }
         
-        // Işık efekti
         if (checkpointLight != null)
         {
             checkpointLight.enabled = true;
@@ -74,25 +71,22 @@ public class Checkpoint : MonoBehaviour
             checkpointLight.intensity = originalLightIntensity * 1.5f;
         }
         
-        // Partikül efekti
         if (checkpointParticles != null)
         {
             checkpointParticles.Play();
         }
         
-        // Ses efekti
         if (audioSource != null && checkpointSound != null)
         {
             audioSource.PlayOneShot(checkpointSound);
         }
         
-        // Bildirim göster
         if (showNotification)
         {
             SaveLoadUI saveLoadUI = FindFirstObjectByType<SaveLoadUI>();
             if (saveLoadUI != null)
             {
-                saveLoadUI.ShowNotification("Checkpoint'e ulaşıldı!");
+                saveLoadUI.ShowNotification("Checkpoint reached!");
             }
         }
     }

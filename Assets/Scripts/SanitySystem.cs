@@ -2,30 +2,43 @@ using UnityEngine;
 
 public class SanitySystem : MonoBehaviour
 {
-    [Header("Sanity Ayarları")]
+    private static SanitySystem instance;
+    public static SanitySystem Instance
+    {
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindFirstObjectByType<SanitySystem>();
+            }
+            return instance;
+        }
+    }
+    
+    [Header("Sanity Settings")]
     [SerializeField] private float maxSanity = 100f;
     [SerializeField] private float currentSanity;
-    [SerializeField] private float sanityDrainRate = 0.5f; // Saniyede azalan
+    [SerializeField] private float sanityDrainRate = 0.5f;
     [SerializeField] private float lowSanityThreshold = 30f;
     [SerializeField] private float criticalSanityThreshold = 15f;
     
-    [Header("Drain Koşulları")]
+    [Header("Drain Conditions")]
     [SerializeField] private bool drainInDarkness = true;
     [SerializeField] private float darknessDrainRate = 1f;
     [SerializeField] private bool drainNearEnemy = true;
     [SerializeField] private float enemyProximityDrainRate = 2f;
     [SerializeField] private float enemyProximityRange = 10f;
     
-    [Header("Efektler")]
-    [SerializeField] private bool enableVisualEffects = true;
+    [Header("Effects")]
     [SerializeField] private bool enableAudioEffects = true;
     
     [Header("Post Processing")]
     [SerializeField] private PostProcessingController postProcessingController;
     
-    [Header("Referanslar")]
+    [Header("References")]
     [SerializeField] private Flashlight flashlight;
     [SerializeField] private LayerMask enemyLayer;
+    [SerializeField] private Transform playerTransform;
     
     [Header("UI")]
     [SerializeField] private GameObject sanityUI;
@@ -42,9 +55,31 @@ public class SanitySystem : MonoBehaviour
     public delegate void CriticalSanityDelegate();
     public event CriticalSanityDelegate OnCriticalSanity;
     
+    void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else if (instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+    }
+    
     void Start()
     {
         currentSanity = maxSanity;
+        
+        if (playerTransform == null)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+            {
+                playerTransform = player.transform;
+            }
+        }
         
         if (flashlight == null)
         {
@@ -68,7 +103,6 @@ public class SanitySystem : MonoBehaviour
     {
         float drainAmount = 0f;
         
-        // Karanlıkta azalma
         if (drainInDarkness)
         {
             bool isInDarkness = flashlight == null || !flashlight.IsOn();
@@ -78,20 +112,18 @@ public class SanitySystem : MonoBehaviour
             }
         }
         
-        // NPC yakınında azalma
         if (drainNearEnemy)
         {
-            Collider[] enemies = Physics.OverlapSphere(transform.position, enemyProximityRange, enemyLayer);
+            Vector3 checkPosition = (playerTransform != null) ? playerTransform.position : transform.position;
+            Collider[] enemies = Physics.OverlapSphere(checkPosition, enemyProximityRange, enemyLayer);
             if (enemies.Length > 0)
             {
                 drainAmount += enemyProximityDrainRate * Time.deltaTime;
             }
         }
         
-        // Genel azalma
         drainAmount += sanityDrainRate * Time.deltaTime;
         
-        // Sanity azalt
         if (drainAmount > 0f)
         {
             ReduceSanity(drainAmount);
@@ -106,7 +138,7 @@ public class SanitySystem : MonoBehaviour
         {
             isCriticalSanity = true;
             OnCriticalSanity?.Invoke();
-            Debug.LogWarning("Kritik sanity seviyesi!");
+            Debug.LogWarning("Critical sanity level!");
         }
         else if (sanityPercent > criticalSanityThreshold)
         {
@@ -117,7 +149,7 @@ public class SanitySystem : MonoBehaviour
         {
             isLowSanity = true;
             OnLowSanity?.Invoke();
-            Debug.Log("Düşük sanity seviyesi!");
+            Debug.Log("Low sanity level!");
         }
         else if (sanityPercent > lowSanityThreshold)
         {
@@ -127,14 +159,8 @@ public class SanitySystem : MonoBehaviour
     
     void ApplySanityEffects()
     {
-        if (!enableVisualEffects && !enableAudioEffects) return;
-        
-        float sanityPercent = (currentSanity / maxSanity) * 100f;
-        
-        // Post-processing efektleri (ileride eklenebilir)
-        if (postProcessingController != null && enableVisualEffects)
+        if (enableAudioEffects)
         {
-            // Vignette, color adjustments vb. eklenebilir
         }
     }
     

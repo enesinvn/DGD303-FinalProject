@@ -3,17 +3,17 @@ using UnityEngine.InputSystem;
 
 public class StaminaSystem : MonoBehaviour
 {
-    [Header("Stamina Ayarları")]
+    [Header("Stamina Settings")]
     [SerializeField] private float maxStamina = 100f;
-    [SerializeField] private float staminaDrainRate = 20f; // Koşarken saniyede azalan
-    [SerializeField] private float staminaRegenRate = 15f; // Dinlenirken saniyede artan
-    [SerializeField] private float regenDelay = 1f; // Koşmayı bıraktıktan kaç saniye sonra dolmaya başlar
-    [SerializeField] private float minStaminaToSprint = 10f; // Koşmak için minimum stamina
+    [SerializeField] private float staminaDrainRate = 20f;
+    [SerializeField] private float staminaRegenRate = 15f;
+    [SerializeField] private float regenDelay = 1f;
+    [SerializeField] private float minStaminaToSprint = 10f;
     
-    [Header("Hareket Referansı")]
+    [Header("Movement Reference")]
     [SerializeField] private CharacterController characterController;
 
-    [Header("Ses Referansı")]
+    [Header("Audio Reference")]
     [SerializeField] private AudioManager audioManager;
     
     private float currentStamina;
@@ -44,12 +44,10 @@ public class StaminaSystem : MonoBehaviour
         
         if (isSprinting && currentStamina > 0)
         {
-            // Koşarken stamina azalt
             currentStamina -= staminaDrainRate * Time.deltaTime;
             currentStamina = Mathf.Max(0, currentStamina);
             timeSinceLastSprint = 0;
             
-            // Stamina bitti
             if (currentStamina <= 0)
             {
                 canSprint = false;
@@ -57,7 +55,6 @@ public class StaminaSystem : MonoBehaviour
         }
         else
         {
-            // Koşmuyor - stamina doldur (delay sonra)
             timeSinceLastSprint += Time.deltaTime;
             
             if (timeSinceLastSprint >= regenDelay)
@@ -65,7 +62,6 @@ public class StaminaSystem : MonoBehaviour
                 currentStamina += staminaRegenRate * Time.deltaTime;
                 currentStamina = Mathf.Min(maxStamina, currentStamina);
                 
-                // Yeterli stamina varsa tekrar koşabilir
                 if (currentStamina >= minStaminaToSprint)
                 {
                     canSprint = true;
@@ -95,5 +91,16 @@ public class StaminaSystem : MonoBehaviour
     public float GetCurrentStamina()
     {
         return currentStamina;
+    }
+    
+    public void SetCurrentStamina(float stamina)
+    {
+        currentStamina = Mathf.Clamp(stamina, 0f, maxStamina);
+    }
+    
+    public void ReduceStamina(float amount)
+    {
+        currentStamina -= amount;
+        currentStamina = Mathf.Max(0f, currentStamina);
     }
 }

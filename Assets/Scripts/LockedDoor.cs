@@ -2,10 +2,10 @@ using UnityEngine;
 
 public class LockedDoor : MonoBehaviour, IInteractable
 {
-    [Header("Kapı Referansı")]
+    [Header("Door Reference")]
     [SerializeField] private Door door;
     
-    [Header("Kilit Sistemi")]
+    [Header("Lock System")]
     [SerializeField] private LockSystem lockSystem;
     
     [Header("UI")]
@@ -33,7 +33,6 @@ public class LockedDoor : MonoBehaviour, IInteractable
     {
         if (lockSystem == null)
         {
-            // Kilit sistemi yoksa normal kapı gibi çalış
             if (door != null)
             {
                 door.Interact();
@@ -43,7 +42,6 @@ public class LockedDoor : MonoBehaviour, IInteractable
         
         if (lockSystem.IsLocked())
         {
-            // Kilitli - açmaya çalış
             InventorySystem inventory = FindFirstObjectByType<InventorySystem>();
             
             if (inventory != null)
@@ -63,17 +61,16 @@ public class LockedDoor : MonoBehaviour, IInteractable
                 }
                 else
                 {
-                    Debug.Log($"Kapı kilitli! Gerekli anahtar: {requiredKey}");
+                    Debug.Log($"Door is locked! Required key: {requiredKey}");
                 }
             }
             else
             {
-                Debug.Log("Kapı kilitli! Anahtar gerekli.");
+                Debug.Log("Door is locked! Key required.");
             }
         }
         else
         {
-            // Kilitli değil - normal kapı gibi çalış
             if (door != null)
             {
                 door.Interact();

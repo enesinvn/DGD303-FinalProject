@@ -4,25 +4,44 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    [Header("Batarya UI")]
+    [Header("Battery UI")]
     [SerializeField] private RectTransform batteryFillTransform;
     [SerializeField] private TextMeshProUGUI batteryText;
     
     [Header("Stamina UI")]
     [SerializeField] private RectTransform staminaFillTransform;
     
-    [Header("Sağlık UI")]
+    [Header("Health UI")]
     [SerializeField] private RectTransform healthFillTransform;
     [SerializeField] private TextMeshProUGUI healthText;
     
-    [Header("Referanslar")]
+    [Header("Sanity UI")]
+    [SerializeField] private RectTransform sanityFillTransform;
+    [SerializeField] private TextMeshProUGUI sanityText;
+    
+    [Header("Crouch Status UI")]
+    [SerializeField] private GameObject crouchIcon;
+    [SerializeField] private GameObject standingIcon;
+    [SerializeField] private float crouchIconDisplayTime = 2f;
+    [SerializeField] private float crouchIconFadeTime = 0.5f;
+    
+    [Header("References")]
     [SerializeField] private Flashlight flashlight;
     [SerializeField] private StaminaSystem staminaSystem;
     [SerializeField] private HealthSystem healthSystem;
+    [SerializeField] private SanitySystem sanitySystem;
+    [SerializeField] private PlayerController playerController;
     
     private Image batteryFillImage;
     private Image staminaFillImage;
     private Image healthFillImage;
+    private Image sanityFillImage;
+    
+    private bool wasCrouching = false;
+    private float crouchIconTimer = 0f;
+    private float standingIconTimer = 0f;
+    private CanvasGroup crouchIconCanvasGroup;
+    private CanvasGroup standingIconCanvasGroup;
     
     void Start()
     {
@@ -40,6 +59,41 @@ public class UIManager : MonoBehaviour
         {
             healthFillImage = healthFillTransform.GetComponent<Image>();
         }
+        
+        if (sanityFillTransform != null)
+        {
+            sanityFillImage = sanityFillTransform.GetComponent<Image>();
+        }
+        
+        if (sanitySystem == null)
+        {
+            sanitySystem = FindFirstObjectByType<SanitySystem>();
+        }
+        
+        if (playerController == null)
+        {
+            playerController = FindFirstObjectByType<PlayerController>();
+        }
+        
+        if (crouchIcon != null)
+        {
+            crouchIconCanvasGroup = crouchIcon.GetComponent<CanvasGroup>();
+            if (crouchIconCanvasGroup == null)
+            {
+                crouchIconCanvasGroup = crouchIcon.AddComponent<CanvasGroup>();
+            }
+            crouchIcon.SetActive(false);
+        }
+        
+        if (standingIcon != null)
+        {
+            standingIconCanvasGroup = standingIcon.GetComponent<CanvasGroup>();
+            if (standingIconCanvasGroup == null)
+            {
+                standingIconCanvasGroup = standingIcon.AddComponent<CanvasGroup>();
+            }
+            standingIcon.SetActive(false);
+        }
     }
     
     void Update()
@@ -47,6 +101,8 @@ public class UIManager : MonoBehaviour
         UpdateBatteryUI();
         UpdateStaminaUI();
         UpdateHealthUI();
+        UpdateSanityUI();
+        UpdateCrouchUI();
     }
     
     void UpdateBatteryUI()
@@ -136,6 +192,125 @@ public class UIManager : MonoBehaviour
             else
             {
                 healthFillImage.color = new Color(0.2f, 1f, 0.2f);
+            }
+        }
+    }
+    
+    void UpdateSanityUI()
+    {
+        if (sanitySystem == null || sanityFillTransform == null) return;
+        
+        float sanityPercent = sanitySystem.GetSanityPercentage();
+        
+        Vector3 scale = sanityFillTransform.localScale;
+        scale.x = sanityPercent / 100f;
+        sanityFillTransform.localScale = scale;
+        
+        if (sanityText != null)
+        {
+            sanityText.text = $"{Mathf.RoundToInt(sanityPercent)}%";
+        }
+        
+        if (sanityFillImage != null)
+        {
+            if (sanitySystem.IsCriticalSanity())
+            {
+                sanityFillImage.color = Color.red;
+            }
+            else if (sanitySystem.IsLowSanity())
+            {
+                sanityFillImage.color = Color.yellow;
+            }
+            else
+            {
+                sanityFillImage.color = new Color(0.5f, 0.2f, 1f);
+            }
+        }
+    }
+    
+    void UpdateCrouchUI()
+    {
+        if (playerController == null) return;
+        
+        bool isCrouching = playerController.IsCrouching;
+        
+        if (isCrouching != wasCrouching)
+        {
+            wasCrouching = isCrouching;
+            
+            if (isCrouching)
+            {
+                crouchIconTimer = crouchIconDisplayTime + crouchIconFadeTime;
+                standingIconTimer = 0f;
+                
+                if (crouchIcon != null)
+                {
+                    crouchIcon.SetActive(true);
+                }
+            }
+            else
+            {
+                standingIconTimer = crouchIconDisplayTime + crouchIconFadeTime;
+                crouchIconTimer = 0f;
+                
+                if (standingIcon != null)
+                {
+                    standingIcon.SetActive(true);
+                }
+            }
+        }
+        
+        if (crouchIconTimer > 0f)
+        {
+            crouchIconTimer -= Time.deltaTime;
+            
+            if (crouchIcon != null && crouchIcon.activeSelf)
+            {
+                if (crouchIconCanvasGroup != null)
+                {
+                    if (crouchIconTimer <= crouchIconFadeTime)
+                    {
+                        crouchIconCanvasGroup.alpha = crouchIconTimer / crouchIconFadeTime;
+                    }
+                    else
+                    {
+                        crouchIconCanvasGroup.alpha = 1f;
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (crouchIcon != null && crouchIcon.activeSelf)
+            {
+                crouchIcon.SetActive(false);
+            }
+        }
+        
+        if (standingIconTimer > 0f)
+        {
+            standingIconTimer -= Time.deltaTime;
+            
+            if (standingIcon != null && standingIcon.activeSelf)
+            {
+                if (standingIconCanvasGroup != null)
+                {
+                    if (standingIconTimer <= crouchIconFadeTime)
+                    {
+                        standingIconCanvasGroup.alpha = standingIconTimer / crouchIconFadeTime;
+                    }
+                    else
+                    {
+                        standingIconCanvasGroup.alpha = 1f;
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (standingIcon != null && standingIcon.activeSelf)
+            {
+                standingIcon.SetActive(false);
             }
         }
     }

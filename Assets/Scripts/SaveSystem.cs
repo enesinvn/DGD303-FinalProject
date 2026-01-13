@@ -15,7 +15,6 @@ public class SaveData
     
     public int sceneIndex;
     
-    // İleride eklenebilecek diğer veriler
     // public int[] inventoryItems;
     // public bool[] doorsUnlocked;
 }
@@ -43,7 +42,6 @@ public class SaveSystem : MonoBehaviour
     {
         SaveData saveData = new SaveData();
         
-        // Oyuncu pozisyonu
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
@@ -53,31 +51,26 @@ public class SaveSystem : MonoBehaviour
             saveData.playerPositionZ = playerPos.z;
         }
         
-        // Sağlık
         HealthSystem healthSystem = FindFirstObjectByType<HealthSystem>();
         if (healthSystem != null)
         {
             saveData.currentHealth = healthSystem.GetCurrentHealth();
         }
         
-        // Stamina
         StaminaSystem staminaSystem = FindFirstObjectByType<StaminaSystem>();
         if (staminaSystem != null)
         {
             saveData.currentStamina = staminaSystem.GetCurrentStamina();
         }
         
-        // Batarya
         Flashlight flashlight = FindFirstObjectByType<Flashlight>();
         if (flashlight != null)
         {
             saveData.batteryLife = flashlight.GetBatteryPercentage();
         }
         
-        // Sahne
         saveData.sceneIndex = UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex;
         
-        // Dosyaya kaydet
         string filePath = GetSaveFilePath();
         BinaryFormatter formatter = new BinaryFormatter();
         FileStream stream = new FileStream(filePath, FileMode.Create);
@@ -85,7 +78,7 @@ public class SaveSystem : MonoBehaviour
         formatter.Serialize(stream, saveData);
         stream.Close();
         
-        Debug.Log($"Oyun kaydedildi: {filePath}");
+        Debug.Log($"Game saved: {filePath}");
     }
     
     public bool LoadGame()
@@ -94,7 +87,7 @@ public class SaveSystem : MonoBehaviour
         
         if (!File.Exists(filePath))
         {
-            Debug.LogWarning("Kayıt dosyası bulunamadı!");
+            Debug.LogWarning("Save file not found!");
             return false;
         }
         
@@ -104,11 +97,9 @@ public class SaveSystem : MonoBehaviour
         SaveData saveData = formatter.Deserialize(stream) as SaveData;
         stream.Close();
         
-        // Sahneyi yükle
         if (saveData.sceneIndex != UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex)
         {
             UnityEngine.SceneManagement.SceneManager.LoadScene(saveData.sceneIndex);
-            // Sahne yüklendikten sonra verileri yükle
             Invoke(nameof(LoadGameData), 0.1f);
         }
         else
@@ -116,10 +107,8 @@ public class SaveSystem : MonoBehaviour
             LoadGameData();
         }
         
-        // Verileri yükle
         void LoadGameData()
         {
-            // Oyuncu pozisyonu
             GameObject player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {
@@ -127,18 +116,12 @@ public class SaveSystem : MonoBehaviour
                 player.transform.position = playerPos;
             }
             
-            // Sağlık
             HealthSystem healthSystem = FindFirstObjectByType<HealthSystem>();
             if (healthSystem != null)
             {
                 healthSystem.Heal(saveData.currentHealth - healthSystem.GetCurrentHealth());
             }
             
-            // Stamina - StaminaSystem'de setter metodu yoksa eklenebilir
-            // StaminaSystem staminaSystem = FindFirstObjectByType<StaminaSystem>();
-            // if (staminaSystem != null) { ... }
-            
-            // Batarya
             Flashlight flashlight = FindFirstObjectByType<Flashlight>();
             if (flashlight != null)
             {
@@ -151,7 +134,7 @@ public class SaveSystem : MonoBehaviour
             }
         }
         
-        Debug.Log("Oyun yüklendi!");
+        Debug.Log("Game loaded!");
         return true;
     }
     
@@ -166,7 +149,7 @@ public class SaveSystem : MonoBehaviour
         if (File.Exists(filePath))
         {
             File.Delete(filePath);
-            Debug.Log("Kayıt dosyası silindi!");
+            Debug.Log("Save file deleted!");
         }
     }
     

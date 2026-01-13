@@ -2,22 +2,22 @@ using UnityEngine;
 
 public class LockSystem : MonoBehaviour
 {
-    [Header("Kilit Ayarları")]
+    [Header("Lock Settings")]
     [SerializeField] private bool isLocked = true;
-    [SerializeField] private string requiredKeyName = ""; // Gerekli anahtar adı (boşsa herhangi bir anahtar yeterli)
+    [SerializeField] private string requiredKeyName = "";
     [SerializeField] private bool requiresKey = true;
     
-    [Header("Kilit Açma Mini-Oyunu (Opsiyonel)")]
+    [Header("Lockpick Minigame (Optional)")]
     [SerializeField] private bool useMinigame = false;
-    [SerializeField] private float lockpickDifficulty = 0.5f; // 0-1 arası (1 = çok zor)
+    [SerializeField] private float lockpickDifficulty = 0.5f;
     
-    [Header("Ses")]
+    [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip unlockSound;
     [SerializeField] private AudioClip lockpickFailSound;
     
-    [Header("Referanslar")]
-    [SerializeField] private Door door; // Kilitli kapı
+    [Header("References")]
+    [SerializeField] private Door door;
     [SerializeField] private InventorySystem inventorySystem;
     
     private bool isUnlocking = false;
@@ -46,20 +46,19 @@ public class LockSystem : MonoBehaviour
     {
         if (!isLocked)
         {
-            return true; // Zaten açık
+            return true;
         }
         
         if (isUnlocking)
         {
-            return false; // Zaten açılmaya çalışılıyor
+            return false;
         }
         
-        // Anahtar kontrolü
         if (requiresKey)
         {
             if (inventorySystem == null)
             {
-                Debug.LogWarning("Inventory System bulunamadı!");
+                Debug.LogWarning("Inventory System not found!");
                 return false;
             }
             
@@ -67,38 +66,33 @@ public class LockSystem : MonoBehaviour
             
             if (string.IsNullOrEmpty(requiredKeyName))
             {
-                // Herhangi bir anahtar yeterli
                 hasKey = inventorySystem.HasItem("Key") || 
                         inventorySystem.HasItem("Master Key") ||
                         inventorySystem.HasItem("Keycard");
             }
             else
             {
-                // Belirli bir anahtar gerekli
                 hasKey = inventorySystem.HasItem(requiredKeyName);
             }
             
             if (!hasKey)
             {
-                Debug.Log($"Kilit açmak için gerekli anahtar yok: {requiredKeyName}");
+                Debug.Log($"Required key to unlock: {requiredKeyName}");
                 return false;
             }
         }
         
-        // Mini-oyun kullanılıyorsa
         if (useMinigame)
         {
             return TryLockpick();
         }
         
-        // Direkt aç
         Unlock();
         return true;
     }
     
     bool TryLockpick()
     {
-        // Basit bir şans sistemi (ileride mini-oyun eklenebilir)
         float successChance = 1f - lockpickDifficulty;
         successChance = Mathf.Clamp01(successChance);
         
@@ -109,12 +103,11 @@ public class LockSystem : MonoBehaviour
         }
         else
         {
-            // Başarısız
             if (audioSource != null && lockpickFailSound != null)
             {
                 audioSource.PlayOneShot(lockpickFailSound);
             }
-            Debug.Log("Kilit açma başarısız! Tekrar deneyin.");
+            Debug.Log("Lockpick failed! Try again.");
             return false;
         }
     }
@@ -134,7 +127,14 @@ public class LockSystem : MonoBehaviour
             audioSource.PlayOneShot(unlockSound);
         }
         
-        Debug.Log("Kilit açıldı!");
+        ObjectiveSystem objectiveSystem = ObjectiveSystem.Instance;
+        if (objectiveSystem != null)
+        {
+            string doorID = gameObject.name;
+            objectiveSystem.OnDoorUnlocked(doorID);
+        }
+        
+        Debug.Log("Lock unlocked!");
     }
     
     public void Lock()
@@ -146,7 +146,7 @@ public class LockSystem : MonoBehaviour
             door.Lock();
         }
         
-        Debug.Log("Kilitlendi!");
+        Debug.Log("Locked!");
     }
     
     public bool IsLocked()

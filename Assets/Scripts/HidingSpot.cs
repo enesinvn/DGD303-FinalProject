@@ -2,214 +2,82 @@ using UnityEngine;
 
 public class HidingSpot : MonoBehaviour, IInteractable
 {
-    [Header("Saklanma Ayarları")]
-    [SerializeField] private HidingType hidingType = HidingType.Closet;
-    [SerializeField] private Transform hidePosition;
-    [SerializeField] private float hideDuration = 0.5f; // Saklanma animasyon süresi
-    
-    [Header("Nefes Ayarları")]
-    [SerializeField] private bool requiresBreathHolding = true;
-    [SerializeField] private float breathDrainRate = 10f; // Nefes tutarken stamina azalma hızı
-    
-    [Header("Görsel Efektler")]
-    [SerializeField] private GameObject hideIndicator;
-    [SerializeField] private Light hideLight;
-    
-    [Header("Ses")]
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip enterSound;
-    [SerializeField] private AudioClip exitSound;
-    
-    [Header("NPC Algılama")]
-    [SerializeField] private float detectionRadius = 2f; // NPC yakınsa tespit edilebilir
-    [SerializeField] private LayerMask enemyLayer;
-    
-    private bool isOccupied = false;
-    private GameObject hiddenPlayer;
-    private Vector3 originalPlayerPosition;
-    private Quaternion originalPlayerRotation;
-    
     public enum HidingType
     {
-        Closet,      // Dolap
-        UnderTable,  // Masa altı
-        Corner,      // Köşe
-        Vent,        // Hava bacası
-        Locker       // Dolap
+        Closet,
+        UnderTable,
+        Corner,
+        Vent,
+        Locker
     }
+    
+    [Header("Hiding Spot Settings")]
+    [SerializeField] private HidingType hidingType = HidingType.Closet;
+    [SerializeField] private Transform playerPosition;
+    [SerializeField] private Transform exitPosition;
+    [SerializeField] private bool hasCustomCamera = false;
+    [SerializeField] private Vector3 cameraOffset = Vector3.zero;
+    [SerializeField] private Vector3 cameraRotation = Vector3.zero;
+    
+    [Header("Status")]
+    [SerializeField] private bool isOccupied = false;
+    
+    [Header("Debug")]
+    [SerializeField] private bool showGizmos = true;
+    
+    private PlayerHiding playerHiding;
     
     void Start()
     {
-        if (hidePosition == null)
+        if (playerPosition == null)
         {
-            hidePosition = transform;
+            GameObject posObj = new GameObject("PlayerPosition");
+            posObj.transform.SetParent(transform);
+            posObj.transform.position = transform.position;
+            posObj.transform.rotation = transform.rotation;
+            playerPosition = posObj.transform;
+            Debug.LogWarning($"[HidingSpot] {name}: PlayerPosition auto-created!");
         }
         
-        if (audioSource == null)
+        if (exitPosition == null)
         {
-            audioSource = gameObject.AddComponent<AudioSource>();
-            audioSource.spatialBlend = 1f;
-            audioSource.maxDistance = 10f;
-        }
-        
-        if (hideIndicator != null)
-        {
-            hideIndicator.SetActive(false);
-        }
-    }
-    
-    void Update()
-    {
-        if (isOccupied && hiddenPlayer != null)
-        {
-            CheckEnemyProximity();
+            GameObject exitObj = new GameObject("ExitPosition");
+            exitObj.transform.SetParent(transform);
+            exitObj.transform.position = transform.position + transform.forward * 1.5f;
+            exitObj.transform.rotation = transform.rotation;
+            exitPosition = exitObj.transform;
+            Debug.LogWarning($"[HidingSpot] {name}: ExitPosition auto-created!");
         }
     }
     
     public void Interact()
     {
+        Debug.Log($"[HidingSpot] Interact called. IsOccupied: {isOccupied}");
+        
+        if (playerHiding == null)
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+            {
+                playerHiding = player.GetComponent<PlayerHiding>();
+            }
+            else
+            {
+                Debug.LogError("[HidingSpot] Player not found!");
+                return;
+            }
+        }
+        
         if (isOccupied)
         {
-            ExitHiding();
+            Debug.Log($"[HidingSpot] Exiting hiding spot: {name}");
+            playerHiding.ExitHidingSpot();
         }
         else
         {
-            EnterHiding();
-        }
-    }
-    
-    void EnterHiding()
-    {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player == null) return;
-        
-        PlayerHiding playerHiding = player.GetComponent<PlayerHiding>();
-        if (playerHiding == null) return;
-        
-        if (playerHiding.CanHide())
-        {
-            isOccupied = true;
-            hiddenPlayer = player;
-            
-            // Oyuncu pozisyonunu kaydet
-            originalPlayerPosition = player.transform.position;
-            originalPlayerRotation = player.transform.rotation;
-            
-            // Oyuncuyu saklanma pozisyonuna taşı
-            StartCoroutine(MoveToHidePosition(player));
-            
-            // PlayerHiding'e bildir
-            playerHiding.StartHiding(this, requiresBreathHolding, breathDrainRate);
-            
-            // Görsel feedback
-            if (hideIndicator != null)
-            {
-                hideIndicator.SetActive(true);
-            }
-            
-            if (hideLight != null)
-            {
-                hideLight.enabled = true;
-            }
-            
-            // Ses efekti
-            if (audioSource != null && enterSound != null)
-            {
-                audioSource.PlayOneShot(enterSound);
-            }
-            
-            Debug.Log($"{hidingType} içine saklandınız! (E tuşu ile çıkın)");
-        }
-    }
-    
-    void ExitHiding()
-    {
-        if (hiddenPlayer == null) return;
-        
-        PlayerHiding playerHiding = hiddenPlayer.GetComponent<PlayerHiding>();
-        if (playerHiding != null)
-        {
-            playerHiding.StopHiding();
-        }
-        
-        // Oyuncuyu geri taşı
-        if (hiddenPlayer != null)
-        {
-            hiddenPlayer.transform.position = originalPlayerPosition;
-            hiddenPlayer.transform.rotation = originalPlayerRotation;
-        }
-        
-        // Ses efekti
-        if (audioSource != null && exitSound != null)
-        {
-            audioSource.PlayOneShot(exitSound);
-        }
-        
-        isOccupied = false;
-        hiddenPlayer = null;
-        
-        // Görsel feedback
-        if (hideIndicator != null)
-        {
-            hideIndicator.SetActive(false);
-        }
-        
-        if (hideLight != null)
-        {
-            hideLight.enabled = false;
-        }
-        
-        Debug.Log("Saklanma yerinden çıktınız!");
-    }
-    
-    System.Collections.IEnumerator MoveToHidePosition(GameObject player)
-    {
-        Vector3 startPos = player.transform.position;
-        Vector3 targetPos = hidePosition.position;
-        Quaternion startRot = player.transform.rotation;
-        Quaternion targetRot = hidePosition.rotation;
-        
-        float elapsed = 0f;
-        
-        while (elapsed < hideDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = elapsed / hideDuration;
-            
-            player.transform.position = Vector3.Lerp(startPos, targetPos, t);
-            player.transform.rotation = Quaternion.Lerp(startRot, targetRot, t);
-            
-            yield return null;
-        }
-        
-        player.transform.position = targetPos;
-        player.transform.rotation = targetRot;
-    }
-    
-    void CheckEnemyProximity()
-    {
-        Collider[] enemies = Physics.OverlapSphere(transform.position, detectionRadius, enemyLayer);
-        
-        if (enemies.Length > 0)
-        {
-            // NPC çok yakınsa tespit edilebilir
-            foreach (Collider enemy in enemies)
-            {
-                EnemyAI enemyAI = enemy.GetComponent<EnemyAI>();
-                if (enemyAI != null)
-                {
-                    float distance = Vector3.Distance(enemy.transform.position, transform.position);
-                    if (distance < detectionRadius * 0.5f) // Çok yakınsa
-                    {
-                        // %50 şansla tespit edilir
-                        if (Random.value < 0.5f)
-                        {
-                            ExitHiding();
-                            Debug.LogWarning("NPC sizi buldu!");
-                        }
-                    }
-                }
-            }
+            Debug.Log($"[HidingSpot] Entering hiding spot: {name}");
+            SetOccupied(true);
+            playerHiding.EnterHidingSpot(this);
         }
     }
     
@@ -218,28 +86,110 @@ public class HidingSpot : MonoBehaviour, IInteractable
         return isOccupied;
     }
     
+    public void SetOccupied(bool occupied)
+    {
+        Debug.Log($"[HidingSpot] {name} SetOccupied: {occupied}");
+        isOccupied = occupied;
+    }
+    
     public HidingType GetHidingType()
     {
         return hidingType;
     }
     
-    void OnDrawGizmosSelected()
+    public Vector3 GetPlayerPosition()
     {
-        // Detection radius göster
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, detectionRadius);
-        
-        // Hide position göster
-        if (hidePosition != null)
+        if (playerPosition != null)
         {
-            Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(hidePosition.position, 0.3f);
+            Vector3 pos = playerPosition.position;
+            if (pos.y < 0.1f)
+            {
+                pos.y = Mathf.Max(transform.position.y, 0.1f);
+            }
+            return pos;
         }
-        else
+        
+        Vector3 fallbackPos = transform.position;
+        fallbackPos.y = Mathf.Max(transform.position.y, 0.1f);
+        return fallbackPos;
+    }
+    
+    public Quaternion GetPlayerRotation()
+    {
+        return playerPosition != null ? playerPosition.rotation : transform.rotation;
+    }
+    
+    public Vector3 GetExitPosition()
+    {
+        if (exitPosition != null)
+        {
+            Vector3 pos = exitPosition.position;
+            if (pos.y < 0.1f)
+            {
+                pos.y = Mathf.Max(transform.position.y, 0.1f);
+            }
+            return pos;
+        }
+        
+        Vector3 fallbackPos = transform.position + transform.forward * 1.5f;
+        fallbackPos.y = Mathf.Max(transform.position.y, 0.1f);
+        return fallbackPos;
+    }
+    
+    public bool HasCustomCameraPosition()
+    {
+        return hasCustomCamera;
+    }
+    
+    public Vector3 GetCameraOffset()
+    {
+        return cameraOffset;
+    }
+    
+    public Vector3 GetCameraRotation()
+    {
+        return cameraRotation;
+    }
+    
+    void OnDrawGizmos()
+    {
+        if (!showGizmos) return;
+        
+        if (playerPosition != null)
+        {
+            Gizmos.color = Color.blue;
+            Gizmos.DrawWireSphere(playerPosition.position, 0.3f);
+            Gizmos.DrawLine(transform.position, playerPosition.position);
+            
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawRay(playerPosition.position, playerPosition.forward * 0.5f);
+        }
+        
+        if (exitPosition != null)
         {
             Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(transform.position, 0.3f);
+            Gizmos.DrawWireSphere(exitPosition.position, 0.3f);
+            Gizmos.DrawLine(transform.position, exitPosition.position);
+            
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawRay(exitPosition.position, exitPosition.forward * 0.5f);
+        }
+        
+        Gizmos.color = isOccupied ? Color.red : Color.white;
+        Gizmos.DrawWireCube(transform.position, Vector3.one * 0.5f);
+        
+        if (playerPosition != null && exitPosition != null)
+        {
+            Gizmos.color = Color.magenta;
+            Gizmos.DrawLine(playerPosition.position, exitPosition.position);
         }
     }
+    
+    void OnDrawGizmosSelected()
+    {
+        if (!showGizmos) return;
+        
+        Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);
+        Gizmos.DrawCube(transform.position, Vector3.one);
+    }
 }
-
