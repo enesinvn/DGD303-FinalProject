@@ -8,14 +8,17 @@ public class GameManager : MonoBehaviour
     [Header("Game State")]
     [SerializeField] private bool isPaused = false;
     [SerializeField] private bool gameOver = false;
+    [SerializeField] private bool gameWon = false;
     
     [Header("UI")]
     [SerializeField] private GameObject pauseMenu;
     [SerializeField] private GameObject gameOverMenu;
+    [SerializeField] private GameObject winMenu;
     
     [Header("References")]
     [SerializeField] private PlayerController playerController;
     [SerializeField] private HealthSystem playerHealth;
+    [SerializeField] private ObjectiveSystem objectiveSystem;
     
     void Awake()
     {
@@ -37,6 +40,16 @@ public class GameManager : MonoBehaviour
             playerHealth.OnDeath += HandlePlayerDeath;
         }
         
+        if (objectiveSystem == null)
+        {
+            objectiveSystem = FindFirstObjectByType<ObjectiveSystem>();
+        }
+        
+        if (objectiveSystem != null)
+        {
+            objectiveSystem.OnObjectiveCompleted += CheckWinCondition;
+        }
+        
         if (pauseMenu != null)
         {
             pauseMenu.SetActive(false);
@@ -46,11 +59,16 @@ public class GameManager : MonoBehaviour
         {
             gameOverMenu.SetActive(false);
         }
+        
+        if (winMenu != null)
+        {
+            winMenu.SetActive(false);
+        }
     }
     
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape) && !gameOver)
+        if (Input.GetKeyDown(KeyCode.Escape) && !gameOver && !gameWon)
         {
             TogglePause();
         }
@@ -171,6 +189,50 @@ public class GameManager : MonoBehaviour
     public bool IsGameOver()
     {
         return gameOver;
+    }
+    
+    void CheckWinCondition(string objectiveID)
+    {
+        if (objectiveSystem == null || gameWon || gameOver) return;
+        
+        Objective completedObj = objectiveSystem.GetAllObjectives().Find(o => o.objectiveID == objectiveID);
+        if (completedObj != null && completedObj.type == ObjectiveType.Escape)
+        {
+            HandleGameWin();
+        }
+    }
+    
+    void HandleGameWin()
+    {
+        gameWon = true;
+        Time.timeScale = 0f;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        
+        if (winMenu != null)
+        {
+            winMenu.SetActive(true);
+        }
+        
+        Debug.Log("YOU ESCAPED! Game Won!");
+    }
+    
+    public bool IsGameWon()
+    {
+        return gameWon;
+    }
+    
+    void OnDestroy()
+    {
+        if (objectiveSystem != null)
+        {
+            objectiveSystem.OnObjectiveCompleted -= CheckWinCondition;
+        }
+        
+        if (playerHealth != null)
+        {
+            playerHealth.OnDeath -= HandlePlayerDeath;
+        }
     }
 }
 

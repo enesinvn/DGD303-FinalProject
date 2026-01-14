@@ -4,7 +4,9 @@ public enum PickupType
 {
     Battery,
     HealthPack,
-    Key
+    Key,
+    QuestItem,
+    Collectible
 }
 
 public class PickupItem : MonoBehaviour, IInteractable
@@ -138,6 +140,14 @@ public class PickupItem : MonoBehaviour, IInteractable
                     itemType = ItemType.Key;
                     isUsable = false;
                     break;
+                case PickupType.QuestItem:
+                    itemType = ItemType.QuestItem;
+                    isUsable = false;
+                    break;
+                case PickupType.Collectible:
+                    itemType = ItemType.Misc;
+                    isUsable = false;
+                    break;
             }
             
             bool added = inventorySystem.AddItem(itemName, itemDescription, itemIcon, itemType, 1, isUsable);
@@ -173,7 +183,7 @@ public class PickupItem : MonoBehaviour, IInteractable
                 }
                 break;
                 
-            case PickupType.Key:
+                case PickupType.Key:
                 if (inventorySystem != null)
                 {
                     bool added = inventorySystem.AddItem(itemName, itemDescription, itemIcon, ItemType.Key, 1, false);
@@ -195,6 +205,46 @@ public class PickupItem : MonoBehaviour, IInteractable
                 else
                 {
                     Debug.LogWarning("Inventory System not found! Key cannot be picked up.");
+                }
+                break;
+                
+                case PickupType.QuestItem:
+                if (inventorySystem != null)
+                {
+                    bool added = inventorySystem.AddItem(itemName, itemDescription, itemIcon, ItemType.QuestItem, 1, false);
+                    if (added)
+                    {
+                        Debug.Log($"{itemName} added to inventory!");
+                        
+                        ObjectiveSystem objectiveSystem = ObjectiveSystem.Instance;
+                        if (objectiveSystem != null)
+                        {
+                            objectiveSystem.OnItemCollected(itemName);
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Inventory full! Quest item cannot be picked up.");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("Inventory System not found! Quest item cannot be picked up.");
+                }
+                break;
+                
+                case PickupType.Collectible:
+                if (inventorySystem != null)
+                {
+                    bool added = inventorySystem.AddItem(itemName, itemDescription, itemIcon, ItemType.Misc, 1, false);
+                    if (added)
+                    {
+                        Debug.Log($"{itemName} collected!");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Inventory full! Collectible cannot be picked up.");
+                    }
                 }
                 break;
         }

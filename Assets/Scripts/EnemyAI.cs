@@ -51,6 +51,10 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private AudioClip killSound;
     [SerializeField] private float soundInterval = 5f;
     
+    [Header("Animation")]
+    [SerializeField] private Animator animator;
+    [SerializeField] private bool useAnimator = true;
+    
     [Header("Debug")]
     [SerializeField] private bool showDebugGizmos = true;
     [SerializeField] private bool enableDebugLogs = true;
@@ -70,6 +74,13 @@ public class EnemyAI : MonoBehaviour
     private float lastSoundTime_Memory = 0f;
     private bool isGameOver = false;
     
+    // Animation parameter hashes
+    private int animIDSpeed;
+    private int animIDGrounded;
+    private int animIDJump;
+    private int animIDFreeFall;
+    private int animIDMotionSpeed;
+    
     public enum EnemyState
     {
         Patrol,
@@ -84,6 +95,7 @@ public class EnemyAI : MonoBehaviour
         InitializeAgent();
         FindPlayer();
         SetupAudio();
+        SetupAnimator();
         
         lastSoundTime_Memory = -soundMemoryDuration;
         searchTimer = 0f;
@@ -97,6 +109,30 @@ public class EnemyAI : MonoBehaviour
         else
         {
             LogWarning("Patrol points not assigned! Enemy won't be able to move.");
+        }
+    }
+    
+    void SetupAnimator()
+    {
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+        }
+        
+        if (animator != null && useAnimator)
+        {
+            // Hash animation parameter names for performance
+            animIDSpeed = Animator.StringToHash("Speed");
+            animIDGrounded = Animator.StringToHash("Grounded");
+            animIDJump = Animator.StringToHash("Jump");
+            animIDFreeFall = Animator.StringToHash("FreeFall");
+            animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
+            
+            Log("Animator initialized");
+        }
+        else if (useAnimator)
+        {
+            LogWarning("Animator not found! Add Animator component to enemy.");
         }
     }
     
@@ -194,6 +230,44 @@ public class EnemyAI : MonoBehaviour
         
         attackTimer -= Time.deltaTime;
         searchTimer -= Time.deltaTime;
+        
+        UpdateAnimator();
+    }
+    
+    void UpdateAnimator()
+    {
+        if (animator == null || !useAnimator) return;
+        
+        // Calculate speed based on agent velocity
+        float speed = 0f;
+        bool isGrounded = true;
+        
+        if (agent != null && agent.enabled)
+        {
+            Vector3 velocity = agent.velocity;
+            speed = new Vector3(velocity.x, 0f, velocity.z).magnitude;
+            
+            // Normalize speed (0-1 range for animator, or use actual speed)
+            float normalizedSpeed = speed / chaseSpeed; // Normalize by max speed
+            
+            // Set animator parameters
+            animator.SetFloat(animIDSpeed, normalizedSpeed);
+            animator.SetFloat(animIDMotionSpeed, 1f); // Motion speed multiplier
+            
+            // Grounded check (NavMeshAgent is always grounded when moving)
+            isGrounded = agent.isOnNavMesh && !agent.isStopped;
+            animator.SetBool(animIDGrounded, isGrounded);
+            
+            // FreeFall (not grounded)
+            animator.SetBool(animIDFreeFall, !isGrounded);
+        }
+        else
+        {
+            // Agent disabled - set idle
+            animator.SetFloat(animIDSpeed, 0f);
+            animator.SetBool(animIDGrounded, true);
+            animator.SetBool(animIDFreeFall, false);
+        }
     }
     
     void UpdateState(float distanceToPlayer)
@@ -599,6 +673,13 @@ public class EnemyAI : MonoBehaviour
     
     void PerformAttack()
     {
+        // Trigger attack animation if animator exists
+        if (animator != null && useAnimator)
+        {
+            // You can add an "Attack" trigger parameter if your animator has attack animations
+            // animator.SetTrigger("Attack");
+        }
+        
         bool playerKilled = false;
         
         // ✅ HealthSystem varsa hasar ver
@@ -740,6 +821,14 @@ public class EnemyAI : MonoBehaviour
         currentState = newState;
         
         Log($"State changed: {previousState} → {currentState}");
+        
+        // Update animator based on state
+        if (animator != null && useAnimator)
+        {
+            // You can add state-specific animation triggers here if needed
+            // For example: animator.SetTrigger("ChaseTrigger");
+        }
+        
         switch (newState)
         {
             case EnemyState.Chase:
@@ -881,6 +970,31 @@ public class EnemyAI : MonoBehaviour
     public EnemyState GetCurrentState()
     {
         return currentState;
+    }
+    
+    /// <summary>
+    /// Patrol point'leri programatik olarak ayarlamak için
+    /// </summary>
+    public void SetPatrolPoints(Transform[] points)
+    {
+        patrolPoints = points;
+        if (patrolPoints != null && patrolPoints.Length > 0)
+        {
+            currentPatrolIndex = 0;
+            if (agent != null && agent.isActiveAndEnabled)
+            {
+                agent.SetDestination(patrolPoints[0].position);
+                Log($"Patrol points updated - {patrolPoints.Length} points assigned");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Mevcut patrol point'leri almak için
+    /// </summary>
+    public Transform[] GetPatrolPoints()
+    {
+        return patrolPoints;
     }
     
     Color GetStateColor()

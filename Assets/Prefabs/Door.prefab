@@ -122,7 +122,7 @@ MonoBehaviour:
   npcCanOpen: 1
   onlyOpenOnChase: 0
   autoCloseDelay: 3
-  npcDetectionRadius: 5
+  npcDetectionRadius: 3
   isOpen: 0
 --- !u!64 &4305724397186554511
 MeshCollider:

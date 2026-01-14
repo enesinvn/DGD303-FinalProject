@@ -62,6 +62,9 @@ public class ObjectiveSystem : MonoBehaviour
     public delegate void ObjectiveCompletedDelegate(string objectiveID);
     public event ObjectiveCompletedDelegate OnObjectiveCompleted;
     
+    public delegate void AllObjectivesCompletedDelegate();
+    public event AllObjectivesCompletedDelegate OnAllObjectivesCompleted;
+    
     public delegate void ObjectiveAddedDelegate(Objective objective);
     public event ObjectiveAddedDelegate OnObjectiveAdded;
     
@@ -120,6 +123,13 @@ public class ObjectiveSystem : MonoBehaviour
             OnObjectiveCompleted?.Invoke(objectiveID);
             UpdateUI();
             
+            // Check if all objectives are completed
+            bool allCompleted = objectives.TrueForAll(o => o.isCompleted);
+            if (allCompleted && objectives.Count > 0)
+            {
+                OnAllObjectivesCompleted?.Invoke();
+            }
+            
             Debug.Log($"Objective completed: {obj.title}");
         }
     }
@@ -157,9 +167,15 @@ public class ObjectiveSystem : MonoBehaviour
                         break;
                         
                     case ObjectiveType.ReachLocation:
+                        // ReachLocation is handled by ObjectiveTrigger
                         break;
                         
                     case ObjectiveType.UnlockDoor:
+                        // UnlockDoor is handled by Door/LockSystem
+                        break;
+                        
+                    case ObjectiveType.Escape:
+                        // Escape is handled by ObjectiveTrigger (exit zone)
                         break;
                 }
                 

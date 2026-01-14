@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class AudioManager : MonoBehaviour
 {
+    public static AudioManager Instance { get; private set; }
+    
     [Header("Ambient Sounds")]
     [SerializeField] private AudioSource ambientAudioSource;
     [SerializeField] private AudioClip[] ambientSounds;
@@ -18,7 +20,28 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioClip heavyBreathing;
     [SerializeField] private float breathingVolume = 0.5f;
     
+    [Header("UI Sounds")]
+    [SerializeField] private AudioSource uiAudioSource;
+    [SerializeField] private AudioClip buttonHoverSound;
+    [SerializeField] private AudioClip buttonClickSound;
+    [SerializeField] private float uiVolume = 0.5f;
+    
     private bool isBreathingHeavy = false;
+    
+    void Awake()
+    {
+        // Singleton pattern
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
+    }
     
     void Start()
     {
@@ -51,6 +74,22 @@ public class AudioManager : MonoBehaviour
             breathingAudioSource.loop = true;
             breathingAudioSource.volume = 0f;
             breathingAudioSource.spatialBlend = 0f;
+        }
+        
+        // UI Audio Source setup
+        if (uiAudioSource == null)
+        {
+            // Create UI AudioSource if not assigned
+            GameObject uiAudioObject = new GameObject("UI Audio Source");
+            uiAudioObject.transform.SetParent(transform);
+            uiAudioSource = uiAudioObject.AddComponent<AudioSource>();
+        }
+        
+        if (uiAudioSource != null)
+        {
+            uiAudioSource.loop = false;
+            uiAudioSource.volume = uiVolume;
+            uiAudioSource.spatialBlend = 0f;
         }
     }
     
@@ -102,6 +141,22 @@ public class AudioManager : MonoBehaviour
         if (ambientAudioSource != null && clip != null)
         {
             ambientAudioSource.PlayOneShot(clip, volume);
+        }
+    }
+    
+    public void PlayButtonHover()
+    {
+        if (uiAudioSource != null && buttonHoverSound != null)
+        {
+            uiAudioSource.PlayOneShot(buttonHoverSound, uiVolume);
+        }
+    }
+    
+    public void PlayButtonClick()
+    {
+        if (uiAudioSource != null && buttonClickSound != null)
+        {
+            uiAudioSource.PlayOneShot(buttonClickSound, uiVolume);
         }
     }
 }
