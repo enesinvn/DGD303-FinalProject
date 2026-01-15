@@ -14,6 +14,7 @@ public class HeadBob : MonoBehaviour
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private CharacterController characterController;
+    [SerializeField] private PlayerHiding playerHiding;
 
     [Header("FOV Change")]
     [SerializeField] private Camera mainCamera;
@@ -36,6 +37,11 @@ public class HeadBob : MonoBehaviour
             characterController = GetComponent<CharacterController>();
         }
         
+        if (playerHiding == null)
+        {
+            playerHiding = GetComponent<PlayerHiding>();
+        }
+        
         defaultYPos = cameraTransform.localPosition.y;
 
         if (mainCamera == null)
@@ -55,6 +61,16 @@ public class HeadBob : MonoBehaviour
         if (cameraTransform == null || characterController == null) return;
         
         if (!characterController.enabled) return;
+        
+        // Saklanırken kafa sallama efektini durdur
+        if (playerHiding != null && playerHiding.IsHiding())
+        {
+            timer = 0;
+            Vector3 resetPos = cameraTransform.localPosition;
+            resetPos.x = Mathf.Lerp(resetPos.x, 0f, Time.deltaTime * 10f);
+            cameraTransform.localPosition = resetPos;
+            return;
+        }
         
         float speed = characterController.velocity.magnitude;
         

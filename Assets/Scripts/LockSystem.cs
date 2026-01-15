@@ -34,6 +34,13 @@ public class LockSystem : MonoBehaviour
             inventorySystem = FindFirstObjectByType<InventorySystem>();
         }
         
+        // First check if AudioSource exists on GameObject (shared with Door)
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+        }
+        
+        // If still null, create new one
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();

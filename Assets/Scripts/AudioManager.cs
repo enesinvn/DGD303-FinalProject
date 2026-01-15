@@ -1,162 +1,276 @@
 using UnityEngine;
 
+/// <summary>
+/// Oyundaki tüm ses efektlerini ve müzikleri merkezi olarak yöneten manager.
+/// Arka plan müziği, ambiyans sesleri ve ses geçişlerini kontrol eder.
+/// </summary>
 public class AudioManager : MonoBehaviour
 {
-    public static AudioManager Instance { get; private set; }
+    private static AudioManager instance;
+    public static AudioManager Instance
+    {
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindFirstObjectByType<AudioManager>();
+            }
+            return instance;
+        }
+    }
+    
+    [Header("Background Music")]
+    [SerializeField] private AudioSource musicSource;
+    [SerializeField] private AudioClip normalBackgroundMusic;
+    [SerializeField] private AudioClip tensionMusic;
+    [SerializeField] private AudioClip chaseMusic;
+    [SerializeField] private float musicVolume = 0.3f;
+    [SerializeField] private float musicFadeSpeed = 1f;
     
     [Header("Ambient Sounds")]
-    [SerializeField] private AudioSource ambientAudioSource;
-    [SerializeField] private AudioClip[] ambientSounds;
-    [SerializeField] private float ambientVolume = 0.3f;
-    
-    [Header("Music")]
-    [SerializeField] private AudioSource musicAudioSource;
-    [SerializeField] private AudioClip backgroundMusic;
-    [SerializeField] private float musicVolume = 0.2f;
-    
-    [Header("Breath")]
-    [SerializeField] private AudioSource breathingAudioSource;
-    [SerializeField] private AudioClip normalBreathing;
-    [SerializeField] private AudioClip heavyBreathing;
-    [SerializeField] private float breathingVolume = 0.5f;
+    [SerializeField] private AudioSource ambientSource;
+    [SerializeField] private AudioClip horrorAmbient;
+    [SerializeField] private float ambientVolume = 0.2f;
     
     [Header("UI Sounds")]
-    [SerializeField] private AudioSource uiAudioSource;
-    [SerializeField] private AudioClip buttonHoverSound;
+    [SerializeField] private AudioSource uiSource;
     [SerializeField] private AudioClip buttonClickSound;
-    [SerializeField] private float uiVolume = 0.5f;
+    [SerializeField] private AudioClip buttonHoverSound;
+    [SerializeField] private AudioClip victorySound;
+    [SerializeField] private AudioClip defeatSound;
     
-    private bool isBreathingHeavy = false;
+    [Header("Player Sounds")]
+    [SerializeField] private AudioClip breathSound;
+    [SerializeField] private AudioClip itemPickupSound;
+    [SerializeField] private AudioClip doorLockSound;
+    
+    private MusicState currentMusicState = MusicState.Normal;
+    private float targetVolume = 0f;
+    
+    public enum MusicState
+    {
+        Normal,
+        Tension,
+        Chase
+    }
     
     void Awake()
     {
-        // Singleton pattern
-        if (Instance == null)
+        if (instance == null)
         {
-            Instance = this;
+            instance = this;
             DontDestroyOnLoad(gameObject);
         }
-        else
+        else if (instance != this)
         {
             Destroy(gameObject);
             return;
         }
-    }
-    
-    void Start()
-    {
+        
         SetupAudioSources();
-        PlayAmbientSound();
-        PlayBackgroundMusic();
     }
     
     void SetupAudioSources()
     {
-        // Ambient Audio Source setup
-        if (ambientAudioSource != null)
+        // Music source
+        if (musicSource == null)
         {
-            ambientAudioSource.loop = true;
-            ambientAudioSource.volume = ambientVolume;
-            ambientAudioSource.spatialBlend = 0f;
+            GameObject musicObj = new GameObject("MusicSource");
+            musicObj.transform.SetParent(transform);
+            musicSource = musicObj.AddComponent<AudioSource>();
         }
         
-        // Music Audio Source setup
-        if (musicAudioSource != null)
+        musicSource.loop = true;
+        musicSource.playOnAwake = false;
+        musicSource.volume = 0f;
+        targetVolume = musicVolume;
+        
+        // Ambient source
+        if (ambientSource == null)
         {
-            musicAudioSource.loop = true;
-            musicAudioSource.volume = musicVolume;
-            musicAudioSource.spatialBlend = 0f;
+            GameObject ambientObj = new GameObject("AmbientSource");
+            ambientObj.transform.SetParent(transform);
+            ambientSource = ambientObj.AddComponent<AudioSource>();
         }
         
-        // Breathing Audio Source setup
-        if (breathingAudioSource != null)
+        ambientSource.loop = true;
+        ambientSource.playOnAwake = false;
+        ambientSource.volume = ambientVolume;
+        
+        // UI source
+        if (uiSource == null)
         {
-            breathingAudioSource.loop = true;
-            breathingAudioSource.volume = 0f;
-            breathingAudioSource.spatialBlend = 0f;
+            GameObject uiObj = new GameObject("UISource");
+            uiObj.transform.SetParent(transform);
+            uiSource = uiObj.AddComponent<AudioSource>();
         }
         
-        // UI Audio Source setup
-        if (uiAudioSource == null)
-        {
-            // Create UI AudioSource if not assigned
-            GameObject uiAudioObject = new GameObject("UI Audio Source");
-            uiAudioObject.transform.SetParent(transform);
-            uiAudioSource = uiAudioObject.AddComponent<AudioSource>();
-        }
+        uiSource.playOnAwake = false;
+        uiSource.volume = 0.7f;
+    }
+    
+    void Start()
+    {
+        // Start normal background music
+        PlayMusic(MusicState.Normal);
         
-        if (uiAudioSource != null)
+        // Start ambient sounds
+        if (horrorAmbient != null)
         {
-            uiAudioSource.loop = false;
-            uiAudioSource.volume = uiVolume;
-            uiAudioSource.spatialBlend = 0f;
+            ambientSource.clip = horrorAmbient;
+            ambientSource.Play();
         }
     }
     
-    void PlayAmbientSound()
+    void Update()
     {
-        if (ambientAudioSource != null && ambientSounds != null && ambientSounds.Length > 0)
+        // Smooth volume transitions
+        if (musicSource.volume != targetVolume)
         {
-            int randomIndex = Random.Range(0, ambientSounds.Length);
-            ambientAudioSource.clip = ambientSounds[randomIndex];
-            ambientAudioSource.Play();
+            musicSource.volume = Mathf.MoveTowards(musicSource.volume, targetVolume, Time.deltaTime * musicFadeSpeed);
         }
     }
     
-    void PlayBackgroundMusic()
+    public void PlayMusic(MusicState newState)
     {
-        if (musicAudioSource != null && backgroundMusic != null)
-        {
-            musicAudioSource.clip = backgroundMusic;
-            musicAudioSource.Play();
-        }
-    }
-    
-    public void SetBreathingState(bool isHeavy, float staminaPercent)
-    {
-        if (breathingAudioSource == null) return;
+        if (currentMusicState == newState && musicSource.isPlaying) return;
         
-        if (staminaPercent < 30f && !isBreathingHeavy)
+        currentMusicState = newState;
+        
+        AudioClip targetClip = null;
+        
+        switch (newState)
         {
-            isBreathingHeavy = true;
-            if (heavyBreathing != null)
+            case MusicState.Normal:
+                targetClip = normalBackgroundMusic;
+                break;
+            case MusicState.Tension:
+                targetClip = tensionMusic;
+                break;
+            case MusicState.Chase:
+                targetClip = chaseMusic;
+                break;
+        }
+        
+        if (targetClip != null)
+        {
+            if (musicSource.clip != targetClip)
             {
-                breathingAudioSource.clip = heavyBreathing;
-                breathingAudioSource.Play();
+                StartCoroutine(CrossfadeMusic(targetClip));
             }
-            // Fade in
-            breathingAudioSource.volume = breathingVolume;
         }
-        else if (staminaPercent > 60f && isBreathingHeavy)
-        {
-            isBreathingHeavy = false;
-            // Fade out
-            breathingAudioSource.volume = 0f;
-            breathingAudioSource.Stop();
-        }
+        
+        Debug.Log($"[AudioManager] Switching to {newState} music");
     }
     
-    public void PlayOneShot(AudioClip clip, float volume = 1f)
+    System.Collections.IEnumerator CrossfadeMusic(AudioClip newClip)
     {
-        if (ambientAudioSource != null && clip != null)
+        // Fade out
+        float originalVolume = targetVolume;
+        
+        while (musicSource.volume > 0.01f)
         {
-            ambientAudioSource.PlayOneShot(clip, volume);
+            musicSource.volume -= Time.deltaTime * musicFadeSpeed;
+            yield return null;
         }
+        
+        // Change clip
+        musicSource.clip = newClip;
+        musicSource.Play();
+        
+        // Fade in
+        targetVolume = originalVolume;
+        while (musicSource.volume < targetVolume - 0.01f)
+        {
+            musicSource.volume += Time.deltaTime * musicFadeSpeed;
+            yield return null;
+        }
+        
+        musicSource.volume = targetVolume;
     }
     
-    public void PlayButtonHover()
+    public void StopMusic()
     {
-        if (uiAudioSource != null && buttonHoverSound != null)
+        targetVolume = 0f;
+    }
+    
+    public void ResumeMusic()
+    {
+        targetVolume = musicVolume;
+    }
+    
+    public void PlayUISound(AudioClip clip)
+    {
+        if (uiSource != null && clip != null)
         {
-            uiAudioSource.PlayOneShot(buttonHoverSound, uiVolume);
+            uiSource.PlayOneShot(clip);
         }
     }
     
     public void PlayButtonClick()
     {
-        if (uiAudioSource != null && buttonClickSound != null)
+        PlayUISound(buttonClickSound);
+    }
+    
+    public void PlayButtonHover()
+    {
+        if (uiSource != null && buttonHoverSound != null)
         {
-            uiAudioSource.PlayOneShot(buttonClickSound, uiVolume);
+            uiSource.PlayOneShot(buttonHoverSound, 0.3f); // Lower volume for hover
+        }
+    }
+    
+    public void PlayVictorySound()
+    {
+        PlayUISound(victorySound);
+    }
+    
+    public void PlayDefeatSound()
+    {
+        PlayUISound(defeatSound);
+    }
+    
+    public void PlayBreathSound(AudioSource source)
+    {
+        if (source != null && breathSound != null)
+        {
+            source.PlayOneShot(breathSound, 0.5f);
+        }
+    }
+    
+    public void PlayItemPickupSound(AudioSource source)
+    {
+        if (source != null && itemPickupSound != null)
+        {
+            source.PlayOneShot(itemPickupSound);
+        }
+    }
+    
+    public void PlayDoorLockSound(AudioSource source)
+    {
+        if (source != null && doorLockSound != null)
+        {
+            source.PlayOneShot(doorLockSound);
+        }
+    }
+    
+    public void SetMasterVolume(float volume)
+    {
+        AudioListener.volume = Mathf.Clamp01(volume);
+    }
+    
+    public void SetMusicVolume(float volume)
+    {
+        musicVolume = Mathf.Clamp01(volume);
+        targetVolume = musicVolume;
+    }
+    
+    public void SetAmbientVolume(float volume)
+    {
+        ambientVolume = Mathf.Clamp01(volume);
+        if (ambientSource != null)
+        {
+            ambientSource.volume = ambientVolume;
         }
     }
 }

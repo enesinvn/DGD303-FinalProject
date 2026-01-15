@@ -1,169 +1,243 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
+/// <summary>
+/// Oyunun genel durumunu yöneten merkezi manager.
+/// Oyun bitişi, kazanma/kaybetme ekranları, pause vb.
+/// </summary>
 public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance { get; private set; }
+    private static GameManager instance;
+    public static GameManager Instance
+    {
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindFirstObjectByType<GameManager>();
+            }
+            return instance;
+        }
+    }
     
     [Header("Game State")]
-    [SerializeField] private bool isPaused = false;
-    [SerializeField] private bool gameOver = false;
-    [SerializeField] private bool gameWon = false;
+    [SerializeField] private bool isGameOver = false;
+    [SerializeField] private bool hasWon = false;
     
-    [Header("UI")]
-    [SerializeField] private GameObject pauseMenu;
-    [SerializeField] private GameObject gameOverMenu;
-    [SerializeField] private GameObject winMenu;
+    [Header("UI Screens")]
+    [SerializeField] private GameObject victoryScreen;
+    [SerializeField] private GameObject defeatScreen;
+    [SerializeField] private TextMeshProUGUI victoryMessageText;
+    [SerializeField] private TextMeshProUGUI defeatMessageText;
+    
+    [Header("Victory Settings")]
+    [SerializeField] private string victoryMessage = "You Escaped!\nAll objectives completed!";
+    [SerializeField] private float victoryDelay = 1f;
+    
+    [Header("Defeat Settings")]
+    [SerializeField] private string defeatMessage = "Game Over\nYou were caught!";
     
     [Header("References")]
-    [SerializeField] private PlayerController playerController;
-    [SerializeField] private HealthSystem playerHealth;
     [SerializeField] private ObjectiveSystem objectiveSystem;
+    [SerializeField] private PlayerController playerController;
+    
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip victorySound;
+    [SerializeField] private AudioClip defeatSound;
+    
+    private AudioManager audioManager;
     
     void Awake()
     {
-        if (Instance == null)
+        if (instance == null)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            instance = this;
         }
-        else
+        else if (instance != this)
         {
             Destroy(gameObject);
+            return;
         }
     }
     
     void Start()
     {
-        if (playerHealth != null)
-        {
-            playerHealth.OnDeath += HandlePlayerDeath;
-        }
-        
         if (objectiveSystem == null)
         {
-            objectiveSystem = FindFirstObjectByType<ObjectiveSystem>();
+            objectiveSystem = ObjectiveSystem.Instance;
         }
         
+        if (playerController == null)
+        {
+            playerController = FindFirstObjectByType<PlayerController>();
+        }
+        
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+        
+        audioManager = AudioManager.Instance;
+        
+        // Subscribe to objective system events
         if (objectiveSystem != null)
         {
-            objectiveSystem.OnObjectiveCompleted += CheckWinCondition;
+            objectiveSystem.OnAllObjectivesCompleted += OnAllObjectivesCompleted;
         }
         
-        if (pauseMenu != null)
+        // Hide game over screens
+        if (victoryScreen != null) victoryScreen.SetActive(false);
+        if (defeatScreen != null) defeatScreen.SetActive(false);
+    }
+    
+    void OnDestroy()
+    {
+        if (objectiveSystem != null)
         {
-            pauseMenu.SetActive(false);
-        }
-        
-        if (gameOverMenu != null)
-        {
-            gameOverMenu.SetActive(false);
-        }
-        
-        if (winMenu != null)
-        {
-            winMenu.SetActive(false);
+            objectiveSystem.OnAllObjectivesCompleted -= OnAllObjectivesCompleted;
         }
     }
     
-    void Update()
+    void OnAllObjectivesCompleted()
     {
-        if (Input.GetKeyDown(KeyCode.Escape) && !gameOver && !gameWon)
+        Debug.Log("[GameManager] All objectives completed! Checking for victory...");
+        // Victory will be triggered by escape trigger
+    }
+    
+    public void TriggerVictory()
+    {
+        if (isGameOver) return;
+        
+        isGameOver = true;
+        hasWon = true;
+        
+        Debug.Log("[GameManager] Victory!");
+        
+        // Stop all enemy sounds
+        StopAllEnemySounds();
+        
+        Invoke(nameof(ShowVictoryScreen), victoryDelay);
+        
+        // Play victory sound
+        if (audioManager != null)
         {
-            TogglePause();
+            audioManager.PlayVictorySound();
+            audioManager.StopMusic();
+        }
+        else if (audioSource != null && victorySound != null)
+        {
+            audioSource.PlayOneShot(victorySound);
         }
         
-        if (Input.GetKeyDown(KeyCode.F5))
+        // Disable player movement
+        DisablePlayerControls();
+    }
+    
+    public void TriggerDefeat(string reason = "")
+    {
+        if (isGameOver) return;
+        
+        isGameOver = true;
+        hasWon = false;
+        
+        Debug.Log($"[GameManager] Defeat! Reason: {reason}");
+        
+        if (!string.IsNullOrEmpty(reason))
         {
-            if (SaveSystem.Instance != null && !isPaused && !gameOver)
+            defeatMessage = reason;
+        }
+        
+        // Stop all enemy sounds
+        StopAllEnemySounds();
+        
+        Invoke(nameof(ShowDefeatScreen), 0.5f);
+        
+        // Play defeat sound
+        if (audioManager != null)
+        {
+            audioManager.PlayDefeatSound();
+            audioManager.StopMusic();
+        }
+        else if (audioSource != null && defeatSound != null)
+        {
+            audioSource.PlayOneShot(defeatSound);
+        }
+        
+        // Disable player movement
+        DisablePlayerControls();
+    }
+    
+    void ShowVictoryScreen()
+    {
+        if (victoryScreen != null)
+        {
+            victoryScreen.SetActive(true);
+            
+            if (victoryMessageText != null)
             {
-                SaveSystem.Instance.SaveGame();
-                Debug.Log("Game saved! (F5)");
-                
-                SaveLoadUI saveLoadUI = FindFirstObjectByType<SaveLoadUI>();
-                if (saveLoadUI != null)
-                {
-                    saveLoadUI.ShowNotification("Game saved! (F5)");
-                }
+                victoryMessageText.text = victoryMessage;
             }
         }
         
-        if (Input.GetKeyDown(KeyCode.F9))
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+        Time.timeScale = 0f;
+    }
+    
+    void ShowDefeatScreen()
+    {
+        if (defeatScreen != null)
         {
-            if (SaveSystem.Instance != null && !isPaused && !gameOver)
+            defeatScreen.SetActive(true);
+            
+            if (defeatMessageText != null)
             {
-                bool success = SaveSystem.Instance.LoadGame();
-                if (success)
-                {
-                    Debug.Log("Game loaded! (F9)");
-                    
-                    SaveLoadUI saveLoadUI = FindFirstObjectByType<SaveLoadUI>();
-                    if (saveLoadUI != null)
-                    {
-                        saveLoadUI.ShowNotification("Game loaded! (F9)");
-                    }
-                    
-                    ResumeGame();
-                }
-                else
-                {
-                    Debug.LogWarning("Save file not found!");
-                }
+                defeatMessageText.text = defeatMessage;
             }
         }
-    }
-    
-    public void TogglePause()
-    {
-        isPaused = !isPaused;
         
-        if (isPaused)
-        {
-            PauseGame();
-        }
-        else
-        {
-            ResumeGame();
-        }
-    }
-    
-    void PauseGame()
-    {
-        Time.timeScale = 0f;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        
-        if (pauseMenu != null)
-        {
-            pauseMenu.SetActive(true);
-        }
-    }
-    
-    public void ResumeGame()
-    {
-        Time.timeScale = 1f;
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-        
-        if (pauseMenu != null)
-        {
-            pauseMenu.SetActive(false);
-        }
-        
-        isPaused = false;
-    }
-    
-    void HandlePlayerDeath()
-    {
-        gameOver = true;
         Time.timeScale = 0f;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        
-        if (gameOverMenu != null)
+    }
+    
+    void DisablePlayerControls()
+    {
+        if (playerController != null)
         {
-            gameOverMenu.SetActive(true);
+            playerController.enabled = false;
         }
+        
+        // Disable other player components if needed
+        PlayerHiding hiding = FindFirstObjectByType<PlayerHiding>();
+        if (hiding != null) hiding.enabled = false;
+        
+        PlayerInteraction interaction = FindFirstObjectByType<PlayerInteraction>();
+        if (interaction != null) interaction.enabled = false;
+        
+        // Stop all player audio sources
+        StopAllPlayerSounds();
+    }
+    
+    void StopAllPlayerSounds()
+    {
+        // Find player GameObject
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player == null) return;
+        
+        // Stop all AudioSources on player and children
+        AudioSource[] playerAudioSources = player.GetComponentsInChildren<AudioSource>();
+        foreach (AudioSource audioSource in playerAudioSources)
+        {
+            if (audioSource != null && audioSource.isPlaying)
+            {
+                audioSource.Stop();
+            }
+        }
+        
+        Debug.Log($"[GameManager] Stopped {playerAudioSources.Length} player audio sources");
     }
     
     public void RestartGame()
@@ -172,67 +246,69 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
     
-    public void QuitGame()
+    public void LoadMainMenu()
     {
-        Application.Quit();
-        
-        #if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-        #endif
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(0); // Assuming main menu is scene 0
     }
     
-    public bool IsPaused()
+    public void QuitGame()
     {
-        return isPaused;
+        Debug.Log("Quitting game...");
+        Application.Quit();
+    }
+    
+    public void ResumeGame()
+    {
+        // Resume game after loading save
+        Time.timeScale = 1f;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+        
+        // Re-enable player controls if they were disabled
+        if (playerController != null && !isGameOver)
+        {
+            playerController.enabled = true;
+        }
+        
+        PlayerHiding hiding = FindFirstObjectByType<PlayerHiding>();
+        if (hiding != null && !isGameOver)
+        {
+            hiding.enabled = true;
+        }
+        
+        PlayerInteraction interaction = FindFirstObjectByType<PlayerInteraction>();
+        if (interaction != null && !isGameOver)
+        {
+            interaction.enabled = true;
+        }
+        
+        Debug.Log("[GameManager] Game resumed!");
     }
     
     public bool IsGameOver()
     {
-        return gameOver;
+        return isGameOver;
     }
     
-    void CheckWinCondition(string objectiveID)
+    public bool HasWon()
     {
-        if (objectiveSystem == null || gameWon || gameOver) return;
-        
-        Objective completedObj = objectiveSystem.GetAllObjectives().Find(o => o.objectiveID == objectiveID);
-        if (completedObj != null && completedObj.type == ObjectiveType.Escape)
-        {
-            HandleGameWin();
-        }
+        return hasWon;
     }
     
-    void HandleGameWin()
+    void StopAllEnemySounds()
     {
-        gameWon = true;
-        Time.timeScale = 0f;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-        
-        if (winMenu != null)
+        // Find all enemies and stop their sounds
+        EnemyAI[] enemies = FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
+        foreach (EnemyAI enemy in enemies)
         {
-            winMenu.SetActive(true);
+            AudioSource enemyAudio = enemy.GetComponent<AudioSource>();
+            if (enemyAudio != null && enemyAudio.isPlaying)
+            {
+                enemyAudio.Stop();
+            }
         }
         
-        Debug.Log("YOU ESCAPED! Game Won!");
-    }
-    
-    public bool IsGameWon()
-    {
-        return gameWon;
-    }
-    
-    void OnDestroy()
-    {
-        if (objectiveSystem != null)
-        {
-            objectiveSystem.OnObjectiveCompleted -= CheckWinCondition;
-        }
-        
-        if (playerHealth != null)
-        {
-            playerHealth.OnDeath -= HandlePlayerDeath;
-        }
+        Debug.Log($"[GameManager] Stopped {enemies.Length} enemy audio sources");
     }
 }
-

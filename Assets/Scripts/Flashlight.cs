@@ -16,7 +16,8 @@ public class Flashlight : MonoBehaviour
     
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip toggleSound;
+    [SerializeField] private AudioClip flashlightOnSound;
+    [SerializeField] private AudioClip flashlightOffSound;
     [SerializeField] private AudioClip lowBatterySound;
     
     private float currentBatteryLife;
@@ -73,9 +74,17 @@ public class Flashlight : MonoBehaviour
             flashlight.enabled = isOn;
         }
         
-        if (audioSource != null && toggleSound != null)
+        // Açma/kapama sesini çal
+        if (audioSource != null)
         {
-            audioSource.PlayOneShot(toggleSound);
+            if (isOn && flashlightOnSound != null)
+            {
+                audioSource.PlayOneShot(flashlightOnSound);
+            }
+            else if (!isOn && flashlightOffSound != null)
+            {
+                audioSource.PlayOneShot(flashlightOffSound);
+            }
         }
     }
     

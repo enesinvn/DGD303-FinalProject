@@ -20,9 +20,17 @@ public class Door : MonoBehaviour, IInteractable
     [Header("Lock System (Optional)")]
     [SerializeField] private LockSystem lockSystem;
     
+    [Header("Objectives (Optional)")]
+    [SerializeField] private bool triggerObjectivesOnUnlock = false;
+    [SerializeField] private string unlockObjectiveID = "unlock_door";
+    [SerializeField] private string[] objectivesToActivateOnUnlock = new string[0];
+    
     [Header("NavMesh Settings")]
     [SerializeField] private bool useNavMeshObstacle = true;
     [SerializeField] private bool autoSetupNavMesh = true;
+    
+    [Header("Collision Settings")]
+    [SerializeField] private bool disableColliderWhenOpen = true;
     
     [Header("NPC Door Interaction")]
     [SerializeField] private bool npcCanOpen = true;
@@ -33,8 +41,11 @@ public class Door : MonoBehaviour, IInteractable
     [SerializeField] private bool isOpen = false;
     private bool isMoving = false;
     private NavMeshObstacle navMeshObstacle;
+    private Collider doorCollider;
     private Coroutine autoCloseCoroutine;
     private bool openedByNPC = false;
+    private bool soundPlayed = false;
+    private float soundTriggerProgress = 0.15f; // Ses %15 açılınca çalar
     
     public bool IsOpen { get { return isOpen; } }
     public bool IsLocked 
@@ -56,6 +67,13 @@ public class Door : MonoBehaviour, IInteractable
     
     void Start()
     {
+        // First check if AudioSource exists on GameObject
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+        }
+        
+        // If still null, create new one
         if (audioSource == null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
@@ -66,6 +84,18 @@ public class Door : MonoBehaviour, IInteractable
         if (lockSystem == null)
         {
             lockSystem = GetComponent<LockSystem>();
+        }
+        
+        // Get collider and make sure it's not a trigger
+        doorCollider = GetComponent<Collider>();
+        if (doorCollider != null)
+        {
+            doorCollider.isTrigger = false;
+            Debug.Log($"[Door] {gameObject.name} - Collider found and set to non-trigger");
+        }
+        else
+        {
+            Debug.LogWarning($"[Door] {gameObject.name} - No Collider found! Door won't block player. Please add a BoxCollider.");
         }
         
         if (useNavMeshObstacle)
@@ -99,26 +129,68 @@ public class Door : MonoBehaviour, IInteractable
         if (slideMode)
         {
             Vector3 targetPosition = isOpen ? openPosition : closedPosition;
+            Vector3 startPosition = isOpen ? closedPosition : openPosition;
+            
             transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * openSpeed);
+            
+            // Calculate progress and play sound
+            float progress = CalculateSlideProgress(startPosition, targetPosition);
+            CheckAndPlaySound(progress);
             
             if (Vector3.Distance(transform.position, targetPosition) < 0.01f)
             {
                 transform.position = targetPosition;
                 isMoving = false;
+                soundPlayed = false; // Reset for next movement
                 UpdateNavMeshObstacle();
             }
         }
         else
         {
             Quaternion targetRotation = isOpen ? openRotation : closedRotation;
+            Quaternion startRotation = isOpen ? closedRotation : openRotation;
+            
             transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * openSpeed);
+            
+            // Calculate progress and play sound
+            float progress = CalculateRotationProgress(startRotation, targetRotation);
+            CheckAndPlaySound(progress);
             
             if (Quaternion.Angle(transform.rotation, targetRotation) < 0.1f)
             {
                 transform.rotation = targetRotation;
                 isMoving = false;
+                soundPlayed = false; // Reset for next movement
                 UpdateNavMeshObstacle();
             }
+        }
+    }
+    
+    float CalculateSlideProgress(Vector3 start, Vector3 target)
+    {
+        float totalDistance = Vector3.Distance(start, target);
+        if (totalDistance < 0.01f) return 1f;
+        
+        float currentDistance = Vector3.Distance(start, transform.position);
+        return Mathf.Clamp01(currentDistance / totalDistance);
+    }
+    
+    float CalculateRotationProgress(Quaternion start, Quaternion target)
+    {
+        float totalAngle = Quaternion.Angle(start, target);
+        if (totalAngle < 0.1f) return 1f;
+        
+        float currentAngle = Quaternion.Angle(start, transform.rotation);
+        return Mathf.Clamp01(currentAngle / totalAngle);
+    }
+    
+    void CheckAndPlaySound(float progress)
+    {
+        if (!soundPlayed && progress >= soundTriggerProgress)
+        {
+            PlaySound(isOpen ? openSound : closeSound);
+            EmitDoorSound(isOpen ? 0.6f : 0.5f);
+            soundPlayed = true;
         }
     }
     
@@ -175,11 +247,10 @@ public class Door : MonoBehaviour, IInteractable
         isOpen = true;
         isMoving = true;
         openedByNPC = true;
+        soundPlayed = false; // Reset sound flag for new movement
         
         UpdateNavMeshObstacle();
-        PlaySound(openSound);
-        
-        EmitDoorSound(0.7f);
+        // Sound will play automatically in Update() when door reaches soundTriggerProgress
         
         Debug.Log($"[Door] {gameObject.name} opened by NPC");
         
@@ -216,10 +287,10 @@ public class Door : MonoBehaviour, IInteractable
             isOpen = false;
             isMoving = true;
             openedByNPC = false;
+            soundPlayed = false; // Reset sound flag for closing
             
             UpdateNavMeshObstacle();
-            PlaySound(closeSound);
-            EmitDoorSound(0.5f);
+            // Sound will play automatically in Update() when door reaches soundTriggerProgress
             
             Debug.Log($"[Door] {gameObject.name} auto-closed");
         }
@@ -262,17 +333,24 @@ public class Door : MonoBehaviour, IInteractable
     
     void UpdateNavMeshObstacle()
     {
-        if (navMeshObstacle == null || !useNavMeshObstacle) return;
+        if (navMeshObstacle != null && useNavMeshObstacle)
+        {
+            navMeshObstacle.enabled = !isOpen;
+        }
         
-        navMeshObstacle.enabled = !isOpen;
+        // Kapı açıkken collider'ı kapat, kapalıyken aç
+        if (doorCollider != null && disableColliderWhenOpen)
+        {
+            doorCollider.enabled = !isOpen;
+        }
         
         if (isOpen)
         {
-            Debug.Log($"[Door] {gameObject.name} open - NavMeshObstacle disabled (NPCs can pass)");
+            Debug.Log($"[Door] {gameObject.name} open - Collider disabled (Player can pass)");
         }
         else
         {
-            Debug.Log($"[Door] {gameObject.name} closed - NavMeshObstacle active (NPCs cannot pass)");
+            Debug.Log($"[Door] {gameObject.name} closed - Collider enabled (Player blocked)");
         }
     }
     
@@ -294,10 +372,47 @@ public class Door : MonoBehaviour, IInteractable
                     if (unlocked)
                     {
                         isLocked = false;
+                        
+                        // Trigger objectives when door is unlocked
+                        if (triggerObjectivesOnUnlock)
+                        {
+                            ObjectiveSystem objSystem = ObjectiveSystem.Instance;
+                            if (objSystem != null)
+                            {
+                                // Complete unlock objective
+                                if (!string.IsNullOrEmpty(unlockObjectiveID))
+                                {
+                                    objSystem.CompleteObjective(unlockObjectiveID);
+                                    Debug.Log($"[Door] Completed objective: {unlockObjectiveID}");
+                                }
+                                
+                                // Activate follow-up objectives (elevator + parts)
+                                foreach (string objID in objectivesToActivateOnUnlock)
+                                {
+                                    if (!string.IsNullOrEmpty(objID))
+                                    {
+                                        objSystem.ActivateObjective(objID);
+                                        Debug.Log($"[Door] Activated objective: {objID}");
+                                        
+                                        // "find_elevator" görevini hemen tamamla (kapıyı açtıysan zaten elevator'ü buldun)
+                                        if (objID == "find_elevator")
+                                        {
+                                            objSystem.CompleteObjective("find_elevator");
+                                            Debug.Log($"[Door] Auto-completed 'find_elevator' objective");
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     else
                     {
                         PlaySound(lockedSound);
+                        AudioManager audioManager = AudioManager.Instance;
+                        if (audioManager != null)
+                        {
+                            audioManager.PlayDoorLockSound(audioSource);
+                        }
                         Debug.Log($"{gameObject.name} could not be unlocked!");
                         return;
                     }
@@ -305,6 +420,11 @@ public class Door : MonoBehaviour, IInteractable
                 else
                 {
                     PlaySound(lockedSound);
+                    AudioManager audioManager = AudioManager.Instance;
+                    if (audioManager != null)
+                    {
+                        audioManager.PlayDoorLockSound(audioSource);
+                    }
                     Debug.Log($"{gameObject.name} is locked! Required key: {requiredKey}");
                     return;
                 }
@@ -312,6 +432,11 @@ public class Door : MonoBehaviour, IInteractable
             else
             {
                 PlaySound(lockedSound);
+                AudioManager audioManager = AudioManager.Instance;
+                if (audioManager != null)
+                {
+                    audioManager.PlayDoorLockSound(audioSource);
+                }
                 Debug.Log($"{gameObject.name} is locked! Key required.");
                 return;
             }
@@ -319,6 +444,11 @@ public class Door : MonoBehaviour, IInteractable
         else if (isLocked)
         {
             PlaySound(lockedSound);
+            AudioManager audioManager = AudioManager.Instance;
+            if (audioManager != null)
+            {
+                audioManager.PlayDoorLockSound(audioSource);
+            }
             Debug.Log($"{gameObject.name} is locked!");
             return;
         }
@@ -334,10 +464,10 @@ public class Door : MonoBehaviour, IInteractable
         isOpen = !isOpen;
         isMoving = true;
         openedByNPC = false;
+        soundPlayed = false; // Reset sound flag for new movement
         
         UpdateNavMeshObstacle();
-        PlaySound(isOpen ? openSound : closeSound);
-        EmitDoorSound(0.6f);
+        // Sound will play automatically in Update() when door reaches soundTriggerProgress
         
         Debug.Log($"{gameObject.name} {(isOpen ? "opened" : "closed")} (Player)");
     }

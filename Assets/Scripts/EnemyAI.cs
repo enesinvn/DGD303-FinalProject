@@ -37,6 +37,7 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private string gameOverSceneName = "";
     [SerializeField] private float gameOverDelay = 1f;
     [SerializeField] private bool useHealthSystem = false;
+    [SerializeField] private bool useGameManager = true; // Use GameManager for game over
     
     [Header("References")]
     [SerializeField] private Transform playerTransform;
@@ -49,11 +50,15 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private AudioClip[] chaseSounds;
     [SerializeField] private AudioClip attackSound;
     [SerializeField] private AudioClip killSound;
+    [SerializeField] private AudioClip[] footstepSounds;
     [SerializeField] private float soundInterval = 5f;
     
     [Header("Animation")]
     [SerializeField] private Animator animator;
     [SerializeField] private bool useAnimator = true;
+    [SerializeField] private float patrolAnimationSpeed = 1.0f;
+    [SerializeField] private float chaseAnimationSpeed = 1.2f;
+    [SerializeField] private float searchAnimationSpeed = 1.1f;
     
     [Header("Debug")]
     [SerializeField] private bool showDebugGizmos = true;
@@ -73,6 +78,7 @@ public class EnemyAI : MonoBehaviour
     private Vector3 lastSoundPosition;
     private float lastSoundTime_Memory = 0f;
     private bool isGameOver = false;
+    private AudioManager audioManager;
     
     // Animation parameter hashes
     private int animIDSpeed;
@@ -96,6 +102,8 @@ public class EnemyAI : MonoBehaviour
         FindPlayer();
         SetupAudio();
         SetupAnimator();
+        
+        audioManager = AudioManager.Instance;
         
         lastSoundTime_Memory = -soundMemoryDuration;
         searchTimer = 0f;
@@ -203,7 +211,25 @@ public class EnemyAI : MonoBehaviour
     
     void Update()
     {
-        if (playerTransform == null || isGameOver) return;
+        // Pause or Game Over - stop audio
+        if (Time.timeScale == 0f || isGameOver)
+        {
+            if (audioSource != null && audioSource.isPlaying)
+            {
+                audioSource.Pause();
+            }
+            
+            if (isGameOver) return;
+            return;
+        }
+        
+        // Resume audio if it was paused
+        if (audioSource != null && !audioSource.isPlaying && Time.timeScale > 0f && !isGameOver)
+        {
+            // Don't auto-resume, let the sound play naturally
+        }
+        
+        if (playerTransform == null) return;
         
         float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
         
@@ -247,12 +273,16 @@ public class EnemyAI : MonoBehaviour
             Vector3 velocity = agent.velocity;
             speed = new Vector3(velocity.x, 0f, velocity.z).magnitude;
             
-            // Normalize speed (0-1 range for animator, or use actual speed)
-            float normalizedSpeed = speed / chaseSpeed; // Normalize by max speed
+            // Normalize speed based on agent's current max speed (not always chaseSpeed)
+            // This ensures Speed = 1 when moving at target speed
+            float normalizedSpeed = (agent.speed > 0.01f) ? (speed / agent.speed) : 0f;
+            
+            // Calculate motion speed based on current state
+            float motionSpeed = GetAnimationSpeedForState();
             
             // Set animator parameters
             animator.SetFloat(animIDSpeed, normalizedSpeed);
-            animator.SetFloat(animIDMotionSpeed, 1f); // Motion speed multiplier
+            animator.SetFloat(animIDMotionSpeed, motionSpeed);
             
             // Grounded check (NavMeshAgent is always grounded when moving)
             isGrounded = agent.isOnNavMesh && !agent.isStopped;
@@ -267,6 +297,24 @@ public class EnemyAI : MonoBehaviour
             animator.SetFloat(animIDSpeed, 0f);
             animator.SetBool(animIDGrounded, true);
             animator.SetBool(animIDFreeFall, false);
+        }
+    }
+    
+    float GetAnimationSpeedForState()
+    {
+        switch (currentState)
+        {
+            case EnemyState.Patrol:
+                return patrolAnimationSpeed;
+            case EnemyState.Chase:
+                return chaseAnimationSpeed;
+            case EnemyState.Search:
+            case EnemyState.Investigate:
+                return searchAnimationSpeed;
+            case EnemyState.Attack:
+                return chaseAnimationSpeed; // Attack sırasında chase hızı kullan
+            default:
+                return 1f;
         }
     }
     
@@ -829,6 +877,9 @@ public class EnemyAI : MonoBehaviour
             // For example: animator.SetTrigger("ChaseTrigger");
         }
         
+        // Update music based on state
+        UpdateMusicForState(newState);
+        
         switch (newState)
         {
             case EnemyState.Chase:
@@ -842,6 +893,32 @@ public class EnemyAI : MonoBehaviour
             case EnemyState.Search:
                 searchTimer = searchDuration;
                 break;
+                
+            case EnemyState.Patrol:
+                // Return to normal music when returning to patrol
+                break;
+        }
+    }
+    
+    void UpdateMusicForState(EnemyState state)
+    {
+        if (audioManager == null) return;
+        
+        switch (state)
+        {
+            case EnemyState.Patrol:
+            case EnemyState.Investigate:
+                audioManager.PlayMusic(AudioManager.MusicState.Normal);
+                break;
+                
+            case EnemyState.Search:
+                audioManager.PlayMusic(AudioManager.MusicState.Tension);
+                break;
+                
+            case EnemyState.Chase:
+            case EnemyState.Attack:
+                audioManager.PlayMusic(AudioManager.MusicState.Chase);
+                break;
         }
     }
     
@@ -854,6 +931,22 @@ public class EnemyAI : MonoBehaviour
         
         Log("GAME OVER - Player caught!");
         
+        // Try to use GameManager first
+        if (useGameManager)
+        {
+            GameManager gameManager = GameManager.Instance;
+            if (gameManager != null)
+            {
+                gameManager.TriggerDefeat("You were caught by the enemy!");
+                return;
+            }
+            else
+            {
+                LogWarning("GameManager not found! Using fallback restart method.");
+            }
+        }
+        
+        // Fallback to old system
         if (restartOnCatch)
         {
             Invoke(nameof(RestartGame), gameOverDelay);
@@ -897,6 +990,19 @@ public class EnemyAI : MonoBehaviour
                 audioSource.PlayOneShot(chaseSounds[Random.Range(0, chaseSounds.Length)]);
             }
             lastSoundTime = Time.time;
+        }
+    }
+    
+    // Called by Animation Event (OnFootstep)
+    void OnFootstep()
+    {
+        if (footstepSounds != null && footstepSounds.Length > 0)
+        {
+            if (audioSource != null)
+            {
+                AudioClip clip = footstepSounds[Random.Range(0, footstepSounds.Length)];
+                audioSource.PlayOneShot(clip, 0.3f); // Lower volume for footsteps
+            }
         }
     }
     

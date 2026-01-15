@@ -7,7 +7,10 @@ public class PlayerInteraction : MonoBehaviour
     [Header("Interaction Settings")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private float interactionRange = 3f;
+    [SerializeField] private float hidingSpotRange = 1.5f; // Saklanma için daha kısa mesafe
+    [SerializeField] private float hidingSpotAngle = 45f; // Saklanma için daha dar açı
     [SerializeField] private LayerMask interactableLayer;
+    [SerializeField] private LayerMask obstacleLayer; // Duvar vs kontrolü için
     
     [Header("UI")]
     [SerializeField] private GameObject interactionPrompt;
@@ -94,18 +97,29 @@ public class PlayerInteraction : MonoBehaviour
             
             if (interactable != null)
             {
-                if (currentInteractable != interactable)
+                // HidingSpot için mesafe kontrolü
+                HidingSpot hidingSpot = hit.collider.GetComponent<HidingSpot>();
+                if (hidingSpot != null && hit.distance > hidingSpotRange)
                 {
-                    currentInteractable = interactable;
-                    currentInteractableObject = hit.collider.gameObject;
-                    UpdateInteractionPrompt();
-                    ShowInteractionPrompt(true);
+                    // HidingSpot çok uzakta, devam et
                 }
-                return;
+                else
+                {
+                    if (currentInteractable != interactable)
+                    {
+                        currentInteractable = interactable;
+                        currentInteractableObject = hit.collider.gameObject;
+                        UpdateInteractionPrompt();
+                        ShowInteractionPrompt(true);
+                    }
+                    return;
+                }
             }
         }
         
-        Collider[] nearbyColliders = Physics.OverlapSphere(cameraTransform.position + cameraTransform.forward * (interactionRange * 0.5f), interactionRange * 0.5f);
+        // Maksimum mesafe olarak normal interaction range kullan
+        float searchRadius = interactionRange * 0.5f;
+        Collider[] nearbyColliders = Physics.OverlapSphere(cameraTransform.position + cameraTransform.forward * searchRadius, searchRadius);
         
         IInteractable closestInteractable = null;
         GameObject closestObject = null;
@@ -118,16 +132,39 @@ public class PlayerInteraction : MonoBehaviour
             {
                 Vector3 directionToObject = (col.transform.position - cameraTransform.position).normalized;
                 float angle = Vector3.Angle(cameraTransform.forward, directionToObject);
+                float distance = Vector3.Distance(cameraTransform.position, col.transform.position);
                 
-                if (angle < 60f)
+                // HidingSpot için özel kontroller
+                HidingSpot hidingSpot = col.GetComponent<HidingSpot>();
+                if (hidingSpot != null)
                 {
-                    float distance = Vector3.Distance(cameraTransform.position, col.transform.position);
-                    if (distance < closestDistance && distance <= interactionRange)
+                    // Saklanma için daha kısa mesafe ve dar açı
+                    if (angle > hidingSpotAngle || distance > hidingSpotRange)
                     {
-                        closestDistance = distance;
-                        closestInteractable = interactable;
-                        closestObject = col.gameObject;
+                        continue;
                     }
+                    
+                    // Arada duvar var mı kontrol et
+                    if (!HasLineOfSight(cameraTransform.position, col.transform.position))
+                    {
+                        Debug.Log($"[PlayerInteraction] HidingSpot {col.name} blocked by obstacle!");
+                        continue;
+                    }
+                }
+                else
+                {
+                    // Normal obje için standart açı kontrolü
+                    if (angle > 60f || distance > interactionRange)
+                    {
+                        continue;
+                    }
+                }
+                
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestInteractable = interactable;
+                    closestObject = col.gameObject;
                 }
             }
         }
@@ -151,6 +188,28 @@ public class PlayerInteraction : MonoBehaviour
                 ShowInteractionPrompt(false);
             }
         }
+    }
+    
+    bool HasLineOfSight(Vector3 from, Vector3 to)
+    {
+        Vector3 direction = to - from;
+        float distance = direction.magnitude;
+        
+        // Raycast ile arada engel var mı kontrol et
+        RaycastHit hit;
+        if (Physics.Raycast(from, direction.normalized, out hit, distance, ~0, QueryTriggerInteraction.Ignore))
+        {
+            // Eğer raycast hedefe ulaşmadan bir şeye çarptıysa
+            // ve çarptığı şey saklanma yerinin kendisi değilse
+            HidingSpot hitSpot = hit.collider.GetComponent<HidingSpot>();
+            if (hitSpot == null)
+            {
+                // Arada bir engel var
+                return false;
+            }
+        }
+        
+        return true;
     }
     
     void UpdateInteractionPrompt()
@@ -298,8 +357,18 @@ public class PlayerInteraction : MonoBehaviour
     {
         if (showDebugRay && cameraTransform != null)
         {
+            // Normal etkileşim mesafesi
             Gizmos.color = currentInteractable != null ? Color.green : Color.yellow;
             Gizmos.DrawRay(cameraTransform.position, cameraTransform.forward * interactionRange);
+            
+            // Saklanma mesafesi (daha kısa)
+            HidingSpot currentHiding = currentInteractableObject != null ? currentInteractableObject.GetComponent<HidingSpot>() : null;
+            if (currentHiding != null)
+            {
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawWireSphere(cameraTransform.position, hidingSpotRange);
+                Gizmos.DrawLine(cameraTransform.position, currentInteractableObject.transform.position);
+            }
         }
     }
 }

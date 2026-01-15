@@ -111,6 +111,19 @@ public class ObjectiveSystem : MonoBehaviour
         Debug.Log($"New objective: {title}");
     }
     
+    public void AddObjectiveManual(Objective objective)
+    {
+        objectives.Add(objective);
+        
+        if (objective.isActive)
+        {
+            OnObjectiveAdded?.Invoke(objective);
+        }
+        
+        UpdateUI();
+        Debug.Log($"Objective added (manual): {objective.title} - Active: {objective.isActive}");
+    }
+    
     public void CompleteObjective(string objectiveID)
     {
         Objective obj = objectives.Find(o => o.objectiveID == objectiveID);
@@ -191,7 +204,24 @@ public class ObjectiveSystem : MonoBehaviour
     {
         id = id.ToLower();
         
-        if (id.Contains("key") && !id.Contains("keycard"))
+        // Elevator repair items
+        if (id.Contains("nails") || id.Contains("nail"))
+            return "Nails";
+        if (id.Contains("keycard") || id.Contains("card_key"))
+            return "Keycard";
+        if (id.Contains("screwdriver") || id.Contains("screw_driver"))
+            return "Screwdriver";
+        if (id.Contains("elevator_button") && !id.Contains("call"))
+            return "Elevator Button";
+        if (id.Contains("elevator_call_button") || id.Contains("call_button"))
+            return "Elevator Call Button";
+        
+        // Special keys
+        if (id.Contains("hidden_room_key") || id.Contains("hidden room"))
+            return "Hidden Room Key";
+        
+        // Regular items
+        if (id.Contains("key") && !id.Contains("keycard") && !id.Contains("hidden"))
             return "Key";
         if (id.Contains("master_key"))
             return "Master Key";
@@ -202,12 +232,23 @@ public class ObjectiveSystem : MonoBehaviour
         if (id.Contains("health"))
             return "Health Pack";
         
+        // Generic format: collect_itemname
         if (id.Contains("collect_"))
         {
             string itemName = id.Replace("collect_", "");
+            itemName = itemName.Replace("_", " ");
             if (itemName.Length > 0)
             {
-                itemName = char.ToUpper(itemName[0]) + itemName.Substring(1);
+                // Capitalize each word
+                string[] words = itemName.Split(' ');
+                for (int i = 0; i < words.Length; i++)
+                {
+                    if (words[i].Length > 0)
+                    {
+                        words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1);
+                    }
+                }
+                itemName = string.Join(" ", words);
             }
             return itemName;
         }
@@ -248,23 +289,42 @@ public class ObjectiveSystem : MonoBehaviour
     
     void UpdateUI()
     {
-        Objective activeObjective = objectives.Find(o => o.isActive && !o.isCompleted);
+        // Tüm aktif ve tamamlanmamış görevleri bul
+        var activeObjectives = objectives.FindAll(o => o.isActive && !o.isCompleted);
         
-        if (activeObjective != null)
+        if (activeObjectives.Count > 0)
         {
             if (objectiveUI != null)
             {
                 objectiveUI.SetActive(true);
             }
             
+            // İlk görevi başlık olarak göster
             if (objectiveTitleText != null)
             {
-                objectiveTitleText.text = activeObjective.title;
+                objectiveTitleText.text = activeObjectives[0].title;
             }
             
+            // TÜM aktif görevleri alt alta listele
             if (objectiveDescriptionText != null)
             {
-                objectiveDescriptionText.text = activeObjective.description;
+                string allObjectives = "";
+                
+                for (int i = 0; i < activeObjectives.Count; i++)
+                {
+                    if (i == 0)
+                    {
+                        // İlk görevin açıklaması
+                        allObjectives += activeObjectives[i].description + "\n";
+                    }
+                    else
+                    {
+                        // Diğer görevler başlık olarak
+                        allObjectives += "\n• " + activeObjectives[i].title;
+                    }
+                }
+                
+                objectiveDescriptionText.text = allObjectives;
             }
         }
         else

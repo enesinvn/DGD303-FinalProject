@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 7846411406244375174}
   - component: {fileID: 4305724397186554511}
   - component: {fileID: 2432510109613784246}
-  - component: {fileID: 6472330921999789952}
+  - component: {fileID: 2532446465216072003}
   m_Layer: 3
   m_Name: Door
   m_TagString: Untagged
@@ -113,12 +113,16 @@ MonoBehaviour:
   slideDirection: {x: 0, y: 0, z: 1}
   slideDistance: 2
   audioSource: {fileID: 0}
-  openSound: {fileID: 0}
-  closeSound: {fileID: 0}
-  lockedSound: {fileID: 0}
-  lockSystem: {fileID: 0}
+  openSound: {fileID: 8300000, guid: 0488c1e88660be54a8ac72c18fc870ba, type: 3}
+  closeSound: {fileID: 8300000, guid: 54f2c6c959f6d9b45941e11304b1f33f, type: 3}
+  lockedSound: {fileID: 8300000, guid: 392137c1035b1bf4bb677d9a51839345, type: 3}
+  lockSystem: {fileID: 2432510109613784246}
+  triggerObjectivesOnUnlock: 0
+  unlockObjectiveID: unlock_door
+  objectivesToActivateOnUnlock: []
   useNavMeshObstacle: 1
   autoSetupNavMesh: 1
+  disableColliderWhenOpen: 1
   npcCanOpen: 1
   onlyOpenOnChase: 0
   autoCloseDelay: 3
@@ -139,11 +143,11 @@ MeshCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 5
-  m_Convex: 1
+  m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: -5741174448488666723, guid: c2d9e2603e40e3b4bb85a68888572fd2, type: 3}
 --- !u!114 &2432510109613784246
@@ -158,7 +162,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb0fad9c3f7c6054fb62e5f2d9f03b9c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LockSystem
-  isLocked: 0
+  isLocked: 1
   requiredKeyName: 
   requiresKey: 0
   useMinigame: 0
@@ -168,18 +172,100 @@ MonoBehaviour:
   lockpickFailSound: {fileID: 0}
   door: {fileID: 7846411406244375174}
   inventorySystem: {fileID: 0}
---- !u!114 &6472330921999789952
-MonoBehaviour:
+--- !u!82 &2532446465216072003
+AudioSource:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7062070788438377892}
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 94de6bc1a3682744ea5dc831aaa5c4c7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LockedDoor
-  door: {fileID: 0}
-  lockSystem: {fileID: 0}
-  lockPrompt: {fileID: 0}
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 10
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4

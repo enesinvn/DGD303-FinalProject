@@ -4,17 +4,14 @@ using UnityEngine.InputSystem;
 public class StaminaSystem : MonoBehaviour
 {
     [Header("Stamina Settings")]
-    [SerializeField] private float maxStamina = 100f;
-    [SerializeField] private float staminaDrainRate = 20f;
-    [SerializeField] private float staminaRegenRate = 15f;
-    [SerializeField] private float regenDelay = 1f;
-    [SerializeField] private float minStaminaToSprint = 10f;
+    [SerializeField] private float maxStamina = 150f;
+    [SerializeField] private float staminaDrainRate = 12f;
+    [SerializeField] private float staminaRegenRate = 25f;
+    [SerializeField] private float regenDelay = 0.5f;
+    [SerializeField] private float minStaminaToSprint = 5f;
     
     [Header("Movement Reference")]
     [SerializeField] private CharacterController characterController;
-
-    [Header("Audio Reference")]
-    [SerializeField] private AudioManager audioManager;
     
     private float currentStamina;
     private float timeSinceLastSprint;
@@ -69,13 +66,11 @@ public class StaminaSystem : MonoBehaviour
             }
         }
     }
+    
     void UpdateBreathing()
     {
-    if (audioManager != null)
-    {
-        float staminaPercent = GetStaminaPercentage();
-        audioManager.SetBreathingState(staminaPercent < 30f, staminaPercent);
-    }
+        // Future: Add breathing sounds based on stamina
+        // Low stamina = heavy breathing
     }
 
     public bool CanSprint()

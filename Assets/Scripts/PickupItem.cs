@@ -6,7 +6,13 @@ public enum PickupType
     HealthPack,
     Key,
     QuestItem,
-    Collectible
+    Collectible,
+    // Elevator Escape Items (5 parts)
+    Nails,
+    Keycard,
+    Screwdriver,
+    ElevatorButton,
+    ElevatorCallButton
 }
 
 public class PickupItem : MonoBehaviour, IInteractable
@@ -148,6 +154,26 @@ public class PickupItem : MonoBehaviour, IInteractable
                     itemType = ItemType.Misc;
                     isUsable = false;
                     break;
+                case PickupType.Nails:
+                    itemType = ItemType.Nails;
+                    isUsable = false;
+                    break;
+                case PickupType.Keycard:
+                    itemType = ItemType.Keycard;
+                    isUsable = false;
+                    break;
+                case PickupType.Screwdriver:
+                    itemType = ItemType.Screwdriver;
+                    isUsable = false;
+                    break;
+                case PickupType.ElevatorButton:
+                    itemType = ItemType.ElevatorButton;
+                    isUsable = false;
+                    break;
+                case PickupType.ElevatorCallButton:
+                    itemType = ItemType.ElevatorCallButton;
+                    isUsable = false;
+                    break;
             }
             
             bool added = inventorySystem.AddItem(itemName, itemDescription, itemIcon, itemType, 1, isUsable);
@@ -195,6 +221,13 @@ public class PickupItem : MonoBehaviour, IInteractable
                         if (objectiveSystem != null)
                         {
                             objectiveSystem.OnItemCollected(itemName);
+                            
+                            // Hidden Room Key toplandığında "unlock_door" görevini aktive et
+                            if (itemName.Contains("Hidden Room") || itemName.Contains("hidden room"))
+                            {
+                                objectiveSystem.ActivateObjective("unlock_door");
+                                Debug.Log("[PickupItem] Hidden Room Key collected! Activated 'unlock_door' objective.");
+                            }
                         }
                     }
                     else
@@ -252,7 +285,13 @@ public class PickupItem : MonoBehaviour, IInteractable
     
     void PlayPickupSound()
     {
-        if (audioSource != null && pickupSound != null)
+        // Try AudioManager first for better sound management
+        AudioManager audioManager = AudioManager.Instance;
+        if (audioManager != null)
+        {
+            audioManager.PlayItemPickupSound(audioSource);
+        }
+        else if (audioSource != null && pickupSound != null)
         {
             audioSource.PlayOneShot(pickupSound);
         }

@@ -54,6 +54,16 @@ public class PlayerController : MonoBehaviour
     {
         characterController = GetComponent<CharacterController>();
         
+        if (playerHiding == null)
+        {
+            playerHiding = GetComponent<PlayerHiding>();
+        }
+        
+        if (staminaSystem == null)
+        {
+            staminaSystem = GetComponent<StaminaSystem>();
+        }
+        
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         

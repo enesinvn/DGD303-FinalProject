@@ -77,6 +77,12 @@ public class PlayerHiding : MonoBehaviour
     {
         if (isHiding)
         {
+            // Saklanırken tüm hareketi durdur
+            if (characterController != null && characterController.enabled)
+            {
+                characterController.Move(Vector3.zero);
+            }
+            
             HandleBreathHolding();
         }
         else
@@ -141,7 +147,13 @@ public class PlayerHiding : MonoBehaviour
     
     void PlayBreathSound(AudioClip clip)
     {
-        if (breathingAudioSource != null && clip != null)
+        // Try AudioManager first for breath sounds
+        AudioManager audioManager = AudioManager.Instance;
+        if (audioManager != null && clip == holdingBreathSound)
+        {
+            audioManager.PlayBreathSound(breathingAudioSource);
+        }
+        else if (breathingAudioSource != null && clip != null)
         {
             breathingAudioSource.PlayOneShot(clip);
         }
@@ -190,6 +202,13 @@ public class PlayerHiding : MonoBehaviour
         originalCameraPosition = playerCamera.localPosition;
         originalCameraRotation = playerCamera.localRotation;
         
+        // Hareketi tamamen durdur
+        if (characterController != null)
+        {
+            characterController.Move(Vector3.zero);
+            Debug.Log("[PlayerHiding] Movement stopped");
+        }
+        
         if (playerController != null)
         {
             playerController.enabled = false;
@@ -207,11 +226,13 @@ public class PlayerHiding : MonoBehaviour
             Debug.Log("[PlayerHiding] Flashlight turned off");
         }
         
+        // CharacterController'ı geçici olarak kapat
         if (characterController != null)
         {
             characterController.enabled = false;
         }
         
+        // Oyuncuyu saklanma pozisyonuna taşı
         transform.position = spot.GetPlayerPosition();
         transform.rotation = spot.GetPlayerRotation();
         
@@ -221,6 +242,7 @@ public class PlayerHiding : MonoBehaviour
             playerCamera.localRotation = Quaternion.Euler(spot.GetCameraRotation());
         }
         
+        // CharacterController'ı aktif et ama PlayerController kapalı kalsın
         if (characterController != null)
         {
             characterController.enabled = true;

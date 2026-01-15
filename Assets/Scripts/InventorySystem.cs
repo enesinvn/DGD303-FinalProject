@@ -30,7 +30,13 @@ public enum ItemType
     Distraction,
     Tool,
     QuestItem,
-    Misc
+    Misc,
+    // Elevator Escape Items (5 parts)
+    Nails,
+    Keycard,
+    Screwdriver,
+    ElevatorButton,
+    ElevatorCallButton
 }
 
 public class InventorySystem : MonoBehaviour
