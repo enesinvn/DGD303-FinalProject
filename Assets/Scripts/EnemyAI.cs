@@ -4,6 +4,22 @@ using UnityEngine.SceneManagement;
 
 public class EnemyAI : MonoBehaviour
 {
+    public enum PatrolMode
+    {
+        FixedPoints,        // Belirlenen patrol noktalarını takip et
+        RandomWaypoints,    // Rastgele NavMesh noktalarına git
+        Mixed               // İkisini karıştır (patrol noktaları varsa onları kullan, yoksa rastgele)
+    }
+    
+    public enum EnemyState
+    {
+        Patrol,
+        Chase,
+        Attack,
+        Search,
+        Investigate
+    }
+    
     [Header("AI Settings")]
     [SerializeField] private float detectionRange = 15f;
     [SerializeField] private float attackRange = 2f;
@@ -16,6 +32,10 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private Transform[] patrolPoints;
     [SerializeField] private float waitTimeAtPoint = 2f;
     [SerializeField] private float patrolPointReachedDistance = 0.5f;
+    [SerializeField] private PatrolMode patrolMode = PatrolMode.Mixed;
+    [SerializeField] private float randomPatrolRadius = 20f;
+    [SerializeField] private float minRandomWaitTime = 1f;
+    [SerializeField] private float maxRandomWaitTime = 3f;
     
     [Header("Vision Settings")]
     [SerializeField] private float fieldOfView = 110f;
@@ -79,6 +99,9 @@ public class EnemyAI : MonoBehaviour
     private float lastSoundTime_Memory = 0f;
     private bool isGameOver = false;
     private AudioManager audioManager;
+    private Vector3 currentRandomDestination;
+    private bool hasRandomDestination = false;
+    private float currentRandomWaitTime = 0f;
     
     // Animation parameter hashes
     private int animIDSpeed;
@@ -86,15 +109,6 @@ public class EnemyAI : MonoBehaviour
     private int animIDJump;
     private int animIDFreeFall;
     private int animIDMotionSpeed;
-    
-    public enum EnemyState
-    {
-        Patrol,
-        Chase,
-        Attack,
-        Search,
-        Investigate
-    }
     
     void Start()
     {
@@ -109,14 +123,30 @@ public class EnemyAI : MonoBehaviour
         searchTimer = 0f;
         hasSeenPlayer = false;
         
-        if (patrolPoints != null && patrolPoints.Length > 0)
+        // Patrol moduna göre başlat
+        if (patrolMode == PatrolMode.FixedPoints || patrolMode == PatrolMode.Mixed)
         {
-            agent.SetDestination(patrolPoints[0].position);
-            Log($"Patrol started - First target: {patrolPoints[0].name}");
+            if (patrolPoints != null && patrolPoints.Length > 0)
+            {
+                agent.SetDestination(patrolPoints[0].position);
+                Log($"Patrol started - First target: {patrolPoints[0].name}");
+            }
+            else if (patrolMode == PatrolMode.Mixed)
+            {
+                Log("No patrol points - Starting random waypoint patrol");
+                hasRandomDestination = false;
+                currentRandomWaitTime = 0f;
+            }
+            else
+            {
+                LogWarning("Patrol points not assigned! Enemy won't be able to move.");
+            }
         }
-        else
+        else if (patrolMode == PatrolMode.RandomWaypoints)
         {
-            LogWarning("Patrol points not assigned! Enemy won't be able to move.");
+            Log("Random waypoint patrol mode activated");
+            hasRandomDestination = false;
+            currentRandomWaitTime = 0f;
         }
     }
     
@@ -211,6 +241,29 @@ public class EnemyAI : MonoBehaviour
     
     void Update()
     {
+        // Check if intro/tutorial is active - freeze enemy during intro
+        if (TutorialManager.IsIntroActiveStatic)
+        {
+            // Stop audio during intro
+            if (audioSource != null && audioSource.isPlaying)
+            {
+                audioSource.Pause();
+            }
+            
+            // Stop agent movement
+            if (agent != null && agent.enabled)
+            {
+                agent.isStopped = true;
+            }
+            
+            return; // Don't process any AI logic during intro
+        }
+        else if (agent != null && agent.enabled && agent.isStopped)
+        {
+            // Resume movement when intro ends
+            agent.isStopped = false;
+        }
+        
         // Pause or Game Over - stop audio
         if (Time.timeScale == 0f || isGameOver)
         {
@@ -218,17 +271,17 @@ public class EnemyAI : MonoBehaviour
             {
                 audioSource.Pause();
             }
-            
+
             if (isGameOver) return;
             return;
         }
-        
+
         // Resume audio if it was paused
         if (audioSource != null && !audioSource.isPlaying && Time.timeScale > 0f && !isGameOver)
         {
             // Don't auto-resume, let the sound play naturally
         }
-        
+
         if (playerTransform == null) return;
         
         float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
@@ -627,9 +680,45 @@ public class EnemyAI : MonoBehaviour
     {
         agent.speed = patrolSpeed;
         
+        // Patrol moduna göre davranış belirle
+        bool useFixedPoints = ShouldUseFixedPatrolPoints();
+        
+        if (useFixedPoints)
+        {
+            PatrolFixedPoints();
+        }
+        else
+        {
+            PatrolRandomWaypoints();
+        }
+        
+        PlayIdleSound();
+    }
+    
+    bool ShouldUseFixedPatrolPoints()
+    {
+        switch (patrolMode)
+        {
+            case PatrolMode.FixedPoints:
+                return patrolPoints != null && patrolPoints.Length > 0;
+                
+            case PatrolMode.RandomWaypoints:
+                return false;
+                
+            case PatrolMode.Mixed:
+                return patrolPoints != null && patrolPoints.Length > 0;
+                
+            default:
+                return patrolPoints != null && patrolPoints.Length > 0;
+        }
+    }
+    
+    void PatrolFixedPoints()
+    {
         if (patrolPoints == null || patrolPoints.Length == 0)
         {
-            LogWarning("No patrol points - Enemy cannot move!");
+            LogWarning("No patrol points - Switching to random waypoints!");
+            PatrolRandomWaypoints();
             return;
         }
         
@@ -666,8 +755,63 @@ public class EnemyAI : MonoBehaviour
                 Log($"Path lost, recalculating: Point {currentPatrolIndex}");
             }
         }
+    }
+    
+    void PatrolRandomWaypoints()
+    {
+        // Eğer hedefe ulaştıysak veya hedef yoksa
+        if (!hasRandomDestination || (!agent.pathPending && agent.remainingDistance <= patrolPointReachedDistance))
+        {
+            waitTimer += Time.deltaTime;
+            
+            // Rastgele bekleme süresi dolduysa yeni hedef belirle
+            if (waitTimer >= currentRandomWaitTime)
+            {
+                Vector3 randomDestination = GetRandomNavMeshPoint(transform.position, randomPatrolRadius);
+                
+                if (randomDestination != Vector3.zero)
+                {
+                    agent.SetDestination(randomDestination);
+                    currentRandomDestination = randomDestination;
+                    hasRandomDestination = true;
+                    currentRandomWaitTime = Random.Range(minRandomWaitTime, maxRandomWaitTime);
+                    waitTimer = 0f;
+                    
+                    Log($"Random waypoint set: {randomDestination} (Wait time: {currentRandomWaitTime:F1}s)");
+                }
+                else
+                {
+                    LogWarning("Failed to find random NavMesh point!");
+                    // Tekrar dene
+                    waitTimer = 0f;
+                    currentRandomWaitTime = 0.5f;
+                }
+            }
+        }
+        else if (!agent.hasPath && hasRandomDestination)
+        {
+            // Yol kayboldu, yeniden hesapla
+            agent.SetDestination(currentRandomDestination);
+            Log("Path lost, recalculating random waypoint");
+        }
+    }
+    
+    Vector3 GetRandomNavMeshPoint(Vector3 center, float radius)
+    {
+        // Rastgele bir nokta seç
+        for (int i = 0; i < 30; i++) // 30 deneme yap
+        {
+            Vector3 randomPoint = center + Random.insideUnitSphere * radius;
+            randomPoint.y = center.y; // Y eksenini koru
+            
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(randomPoint, out hit, radius * 0.5f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+        }
         
-        PlayIdleSound();
+        return Vector3.zero; // Bulunamadı
     }
     
     void Chase()
@@ -1061,6 +1205,21 @@ public class EnemyAI : MonoBehaviour
         {
             Gizmos.color = Color.cyan;
             Gizmos.DrawWireSphere(lastSoundPosition, 0.5f);
+        }
+        
+        // Rastgele hedef (Random waypoint - Yeşil)
+        if (hasRandomDestination && patrolMode == PatrolMode.RandomWaypoints)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(currentRandomDestination, 0.7f);
+            Gizmos.DrawLine(transform.position + Vector3.up, currentRandomDestination + Vector3.up);
+        }
+        
+        // Rastgele patrol yarıçapı (Açık yeşil)
+        if (patrolMode == PatrolMode.RandomWaypoints || (patrolMode == PatrolMode.Mixed && (patrolPoints == null || patrolPoints.Length == 0)))
+        {
+            Gizmos.color = new Color(0.5f, 1f, 0.5f, 0.3f);
+            Gizmos.DrawWireSphere(transform.position, randomPatrolRadius);
         }
         
         Gizmos.color = GetStateColor();

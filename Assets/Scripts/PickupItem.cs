@@ -33,6 +33,7 @@ public class PickupItem : MonoBehaviour, IInteractable
     [Header("References")]
     [SerializeField] private Flashlight flashlight;
     [SerializeField] private HealthSystem healthSystem;
+    [SerializeField] private SanitySystem sanitySystem;
     [SerializeField] private InventorySystem inventorySystem;
     
     [Header("Inventory Item")]
@@ -67,6 +68,11 @@ public class PickupItem : MonoBehaviour, IInteractable
         if (healthSystem == null)
         {
             healthSystem = FindFirstObjectByType<HealthSystem>();
+        }
+        
+        if (sanitySystem == null)
+        {
+            sanitySystem = FindFirstObjectByType<SanitySystem>();
         }
         
         if (inventorySystem == null)
@@ -206,6 +212,14 @@ public class PickupItem : MonoBehaviour, IInteractable
                 {
                     healthSystem.Heal(value);
                     Debug.Log($"Health restored: +{value}");
+                }
+                
+                // Health pack also restores sanity
+                if (sanitySystem != null)
+                {
+                    float sanityAmount = value * 0.5f; // Health pack restores 50% of its value as sanity
+                    sanitySystem.RestoreSanity(sanityAmount);
+                    Debug.Log($"Sanity restored: +{sanityAmount}");
                 }
                 break;
                 
