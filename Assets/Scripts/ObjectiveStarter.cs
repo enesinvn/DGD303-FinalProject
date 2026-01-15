@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Oyun başında veya belirli koşullarda görevleri başlatır.
-/// Bu script'i bir GameObject'e ekleyip Inspector'dan görevleri ayarlayabilirsiniz.
+/// Starts objectives at game start or under specific conditions.
+/// You can attach this script to a GameObject and configure objectives in the Inspector.
 /// </summary>
 public class ObjectiveStarter : MonoBehaviour
 {
@@ -80,13 +80,13 @@ public class ObjectiveStarter : MonoBehaviour
             }
             
             StartObjectives();
-            // Bir kere tetiklendikten sonra devre dışı bırak
+            // Disable after first trigger
             startOnTrigger = false;
         }
     }
     
     /// <summary>
-    /// Script'ten manuel olarak görev başlatmak için
+    /// Manually start objectives from script
     /// </summary>
     public void TriggerStartObjectives()
     {
@@ -94,7 +94,7 @@ public class ObjectiveStarter : MonoBehaviour
     }
     
     /// <summary>
-    /// Belirli bir görevi başlatmak için
+    /// Start a specific objective
     /// </summary>
     public void StartSpecificObjective(string objectiveID)
     {

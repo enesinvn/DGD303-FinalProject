@@ -77,7 +77,7 @@ public class PlayerHiding : MonoBehaviour
     {
         if (isHiding)
         {
-            // Saklanırken tüm hareketi durdur
+            // Stop all movement while hiding
             if (characterController != null && characterController.enabled)
             {
                 characterController.Move(Vector3.zero);
@@ -202,7 +202,7 @@ public class PlayerHiding : MonoBehaviour
         originalCameraPosition = playerCamera.localPosition;
         originalCameraRotation = playerCamera.localRotation;
         
-        // Hareketi tamamen durdur
+        // Completely stop movement
         if (characterController != null)
         {
             characterController.Move(Vector3.zero);
@@ -226,13 +226,13 @@ public class PlayerHiding : MonoBehaviour
             Debug.Log("[PlayerHiding] Flashlight turned off");
         }
         
-        // CharacterController'ı geçici olarak kapat
+        // Temporarily disable CharacterController
         if (characterController != null)
         {
             characterController.enabled = false;
         }
         
-        // Oyuncuyu saklanma pozisyonuna taşı
+        // Move player to hiding position
         transform.position = spot.GetPlayerPosition();
         transform.rotation = spot.GetPlayerRotation();
         
@@ -242,7 +242,7 @@ public class PlayerHiding : MonoBehaviour
             playerCamera.localRotation = Quaternion.Euler(spot.GetCameraRotation());
         }
         
-        // CharacterController'ı aktif et ama PlayerController kapalı kalsın
+        // Enable CharacterController but keep PlayerController disabled
         if (characterController != null)
         {
             characterController.enabled = true;

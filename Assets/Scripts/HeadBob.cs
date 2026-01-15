@@ -62,7 +62,7 @@ public class HeadBob : MonoBehaviour
         
         if (!characterController.enabled) return;
         
-        // Saklanırken kafa sallama efektini durdur
+        // Stop head bob effect while hiding
         if (playerHiding != null && playerHiding.IsHiding())
         {
             timer = 0;

@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 using System.Collections;
 
 /// <summary>
-/// Oyunun başlangıcında hikaye ve kontrolleri gösteren intro/tutorial sistemi.
+/// Intro/tutorial system that displays story and controls at the start of the game.
 /// </summary>
 public class TutorialManager : MonoBehaviour
 {

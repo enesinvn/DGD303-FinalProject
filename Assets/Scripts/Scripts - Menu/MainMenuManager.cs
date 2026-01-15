@@ -27,7 +27,7 @@ public class MainMenuManager : MonoBehaviour
 
     private void Start()
     {
-        // Buton listener'larını ekle
+        // Add button listeners
         playButton.onClick.AddListener(PlayGame);
         settingsButton.onClick.AddListener(OpenSettings);
         creditsButton.onClick.AddListener(OpenCredits);
@@ -35,16 +35,16 @@ public class MainMenuManager : MonoBehaviour
         settingsBackButton.onClick.AddListener(CloseSettings);
         creditsBackButton.onClick.AddListener(CloseCredits);
 
-        // Volume slider ayarı
+        // Volume slider setup
         volumeSlider.onValueChanged.AddListener(ChangeVolume);
         volumeSlider.value = AudioListener.volume;
 
-        // Başlangıçta sadece ana menü açık
+        // Only main menu is open at start
         mainMenuPanel.SetActive(true);
         settingsPanel.SetActive(false);
         creditsPanel.SetActive(false);
 
-        // Başlangıçta icon'u ayarla
+        // Set icon at start
         if (volumeIconController != null)
         {
             volumeIconController.UpdateVolumeIcon(volumeSlider.value);

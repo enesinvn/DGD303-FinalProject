@@ -26,6 +26,17 @@ public class PickupItem : MonoBehaviour, IInteractable
     [SerializeField] private float bobSpeed = 2f;
     [SerializeField] private float bobAmount = 0.2f;
     
+    [Header("Glow Effect")]
+    [SerializeField] private bool enableGlow = true;
+    [SerializeField] private Color glowColor = new Color(1f, 0.8f, 0.3f); // Warm yellow/orange
+    [SerializeField] private float glowIntensity = 2f;
+    [SerializeField] private float glowSpeed = 2f;
+    [SerializeField] private float minGlowIntensity = 0.5f;
+    [SerializeField] private float maxGlowIntensity = 3f;
+    [SerializeField] private bool addPointLight = true;
+    [SerializeField] private float lightRange = 3f;
+    [SerializeField] private float lightIntensity = 1f;
+    
     [Header("Audio")]
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip pickupSound;
@@ -48,6 +59,13 @@ public class PickupItem : MonoBehaviour, IInteractable
     
     private Vector3 startPosition;
     private bool isPickedUp = false;
+    
+    // Glow effect variables
+    private Renderer itemRenderer;
+    private Material glowMaterial;
+    private Light pointLight;
+    private float currentGlowIntensity;
+    private bool glowIncreasing = true;
     
     void Start()
     {
@@ -79,16 +97,117 @@ public class PickupItem : MonoBehaviour, IInteractable
         {
             inventorySystem = FindFirstObjectByType<InventorySystem>();
         }
+        
+        // Setup glow effect
+        if (enableGlow)
+        {
+            SetupGlowEffect();
+        }
+    }
+    
+    void SetupGlowEffect()
+    {
+        // Get or create renderer
+        itemRenderer = GetComponentInChildren<Renderer>();
+        if (itemRenderer == null)
+        {
+            itemRenderer = GetComponent<Renderer>();
+        }
+        
+        if (itemRenderer != null)
+        {
+            // Create a copy of the material to avoid modifying the original
+            glowMaterial = new Material(itemRenderer.material);
+            itemRenderer.material = glowMaterial;
+            
+            // Enable emission
+            glowMaterial.EnableKeyword("_EMISSION");
+            
+            // Set initial glow
+            currentGlowIntensity = minGlowIntensity;
+            UpdateGlowEmission();
+        }
+        else
+        {
+            Debug.LogWarning($"[PickupItem] No Renderer found on {gameObject.name}. Glow effect disabled.");
+            enableGlow = false;
+        }
+        
+        // Add point light if enabled
+        if (addPointLight)
+        {
+            pointLight = GetComponentInChildren<Light>();
+            if (pointLight == null)
+            {
+                GameObject lightObj = new GameObject("PickupLight");
+                lightObj.transform.SetParent(transform);
+                lightObj.transform.localPosition = Vector3.zero;
+                
+                pointLight = lightObj.AddComponent<Light>();
+                pointLight.type = LightType.Point;
+                pointLight.range = lightRange;
+                pointLight.intensity = lightIntensity;
+                pointLight.color = glowColor;
+                pointLight.renderMode = LightRenderMode.ForcePixel;
+            }
+        }
+    }
+    
+    void UpdateGlowEmission()
+    {
+        if (glowMaterial == null) return;
+        
+        Color finalColor = glowColor * Mathf.LinearToGammaSpace(currentGlowIntensity);
+        glowMaterial.SetColor("_EmissionColor", finalColor);
+        
+        // Update point light intensity if it exists
+        if (pointLight != null)
+        {
+            pointLight.intensity = lightIntensity * (currentGlowIntensity / maxGlowIntensity);
+        }
     }
     
     void Update()
     {
         if (isPickedUp) return;
         
+        // Rotation animation
         transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime);
         
+        // Bob animation
         float newY = startPosition.y + Mathf.Sin(Time.time * bobSpeed) * bobAmount;
         transform.position = new Vector3(transform.position.x, newY, transform.position.z);
+        
+        // Glow animation
+        if (enableGlow && glowMaterial != null)
+        {
+            UpdateGlowAnimation();
+        }
+    }
+    
+    void UpdateGlowAnimation()
+    {
+        // Pulse the glow intensity
+        if (glowIncreasing)
+        {
+            currentGlowIntensity += glowSpeed * Time.deltaTime;
+            if (currentGlowIntensity >= maxGlowIntensity)
+            {
+                currentGlowIntensity = maxGlowIntensity;
+                glowIncreasing = false;
+            }
+        }
+        else
+        {
+            currentGlowIntensity -= glowSpeed * Time.deltaTime;
+            if (currentGlowIntensity <= minGlowIntensity)
+            {
+                currentGlowIntensity = minGlowIntensity;
+                glowIncreasing = true;
+            }
+        }
+        
+        UpdateGlowEmission();
     }
     
     public void Interact()
@@ -236,7 +355,7 @@ public class PickupItem : MonoBehaviour, IInteractable
                         {
                             objectiveSystem.OnItemCollected(itemName);
                             
-                            // Hidden Room Key toplandığında "unlock_door" görevini aktive et
+                            // Activate 'unlock_door' objective when Hidden Room Key is collected
                             if (itemName.Contains("Hidden Room") || itemName.Contains("hidden room"))
                             {
                                 objectiveSystem.ActivateObjective("unlock_door");
@@ -315,6 +434,15 @@ public class PickupItem : MonoBehaviour, IInteractable
     {
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(transform.position, 0.5f);
+    }
+    
+    void OnDestroy()
+    {
+        // Clean up the duplicated material to avoid memory leaks
+        if (glowMaterial != null)
+        {
+            Destroy(glowMaterial);
+        }
     }
 }
 

@@ -12,12 +12,12 @@ public class VolumeIconController : MonoBehaviour
     [Header("Icon Image")]
     [SerializeField] private Image volumeIconImage;
 
-    // Volume değerine göre icon'u güncelle
+    // Update icon based on volume value
     public void UpdateVolumeIcon(float volume)
     {
         if (volumeIconImage == null) return;
 
-        // Volume 0-1 arası (slider value)
+        // Volume between 0-1 (slider value)
         if (volume <= 0f)
         {
             volumeIconImage.sprite = mutedIcon;

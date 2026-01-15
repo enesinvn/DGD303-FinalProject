@@ -338,7 +338,7 @@ public class Door : MonoBehaviour, IInteractable
             navMeshObstacle.enabled = !isOpen;
         }
         
-        // Kapı açıkken collider'ı kapat, kapalıyken aç
+        // Disable collider when door is open, enable when closed
         if (doorCollider != null && disableColliderWhenOpen)
         {
             doorCollider.enabled = !isOpen;
@@ -394,7 +394,7 @@ public class Door : MonoBehaviour, IInteractable
                                         objSystem.ActivateObjective(objID);
                                         Debug.Log($"[Door] Activated objective: {objID}");
                                         
-                                        // "find_elevator" görevini hemen tamamla (kapıyı açtıysan zaten elevator'ü buldun)
+                                        // Complete 'find_elevator' objective immediately (if you opened the door, you already found the elevator)
                                         if (objID == "find_elevator")
                                         {
                                             objSystem.CompleteObjective("find_elevator");

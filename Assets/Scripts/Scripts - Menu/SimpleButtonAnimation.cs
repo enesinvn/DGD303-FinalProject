@@ -12,13 +12,13 @@ public class SimpleButtonAnimation : MonoBehaviour, IPointerEnterHandler, IPoint
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        // Hover animasyonuna geç
+        // Switch to Hover animation
         animator.Play("Hover");
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        // Normal animasyona dön
+        // Return to Normal animation
         animator.Play("Normal");
     }
 }

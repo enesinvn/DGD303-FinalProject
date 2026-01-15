@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Enemy için patrol point'leri hızlıca oluşturmak için yardımcı script.
-/// Enemy GameObject'ine ekleyin, "Create Patrol Points" butonuna tıklayın.
+/// Helper script to quickly create patrol points for Enemy.
+/// Attach to Enemy GameObject, then click "Create Patrol Points" button.
 /// </summary>
 [System.Serializable]
 public class PatrolPointHelper : MonoBehaviour
@@ -26,21 +26,21 @@ public class PatrolPointHelper : MonoBehaviour
             return;
         }
         
-        // Mevcut patrol point'leri temizle (opsiyonel)
+        // Clear existing patrol points (optional)
         Transform existingParent = transform.Find("PatrolPoints");
         if (existingParent != null)
         {
             DestroyImmediate(existingParent.gameObject);
         }
         
-        // Parent GameObject oluştur
+        // Create parent GameObject
         GameObject parentObject = new GameObject("PatrolPoints");
         parentObject.transform.SetParent(transform);
         parentObject.transform.localPosition = Vector3.zero;
         
         Transform[] newPatrolPoints = new Transform[numberOfPoints];
         
-        // Patrol point'leri oluştur
+        // Create patrol points
         for (int i = 0; i < numberOfPoints; i++)
         {
             float angle = (360f / numberOfPoints) * i;
@@ -56,7 +56,7 @@ public class PatrolPointHelper : MonoBehaviour
             point.transform.position = position;
             point.transform.SetParent(parentObject.transform);
             
-            // Görselleştirme için küçük bir sphere ekle (sadece Scene view'da görünür)
+            // Add a small sphere for visualization (visible only in Scene view)
             #if UNITY_EDITOR
             UnityEditor.EditorUtility.SetDirty(point);
             #endif
@@ -64,7 +64,7 @@ public class PatrolPointHelper : MonoBehaviour
             newPatrolPoints[i] = point.transform;
         }
         
-        // EnemyAI'ya otomatik atama
+        // Auto-assign to EnemyAI
         if (autoAssignToEnemy)
         {
             if (targetEnemy == null)
@@ -101,7 +101,7 @@ public class PatrolPointHelper : MonoBehaviour
     
     void OnDrawGizmosSelected()
     {
-        // Patrol point'lerin konumlarını göster
+        // Show patrol point positions
         Gizmos.color = Color.yellow;
         for (int i = 0; i < numberOfPoints; i++)
         {

@@ -19,7 +19,7 @@ public class DeathManager : MonoBehaviour
     [SerializeField] private string mainMenuSceneName = "MainMenu";
 
     [Header("Restart Event")]
-    public UnityEvent OnRestartRequested; // Arkadaşının sistemi bunu dinleyecek
+    public UnityEvent OnRestartRequested; // Your friend's system will listen to this
 
     private void Awake()
     {
@@ -55,7 +55,7 @@ public class DeathManager : MonoBehaviour
         deathPanel.SetActive(false);
         Time.timeScale = 1f;
 
-        // Arkadaşının checkpoint sistemini tetikle
+        // Trigger your friend's checkpoint system
         OnRestartRequested?.Invoke();
     }
 

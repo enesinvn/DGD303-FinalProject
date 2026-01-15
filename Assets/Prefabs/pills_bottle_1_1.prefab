@@ -129,6 +129,15 @@ MonoBehaviour:
   rotationSpeed: 0
   bobSpeed: 0
   bobAmount: 0
+  enableGlow: 1
+  glowColor: {r: 1, g: 0.8, b: 0.3, a: 1}
+  glowIntensity: 2
+  glowSpeed: 2
+  minGlowIntensity: 0.5
+  maxGlowIntensity: 3
+  addPointLight: 1
+  lightRange: 3
+  lightIntensity: 1
   audioSource: {fileID: 0}
   pickupSound: {fileID: 0}
   flashlight: {fileID: 0}

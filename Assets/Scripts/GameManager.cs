@@ -3,8 +3,8 @@ using UnityEngine.SceneManagement;
 using TMPro;
 
 /// <summary>
-/// Oyunun genel durumunu yöneten merkezi manager.
-/// Oyun bitişi, kazanma/kaybetme ekranları, pause vb.
+/// Central manager that controls the overall game state.
+/// Handles game over, victory/defeat screens, pause, etc.
 /// </summary>
 public class GameManager : MonoBehaviour
 {

@@ -36,7 +36,7 @@ public class HidingSpot : MonoBehaviour, IInteractable
             posObj.transform.position = transform.position;
             posObj.transform.rotation = transform.rotation;
             playerPosition = posObj.transform;
-            Debug.LogWarning($"[HidingSpot] {name}: PlayerPosition auto-created!");
+            // Auto-created successfully (no warning needed)
         }
         
         if (exitPosition == null)
@@ -46,7 +46,7 @@ public class HidingSpot : MonoBehaviour, IInteractable
             exitObj.transform.position = transform.position + transform.forward * 1.5f;
             exitObj.transform.rotation = transform.rotation;
             exitPosition = exitObj.transform;
-            Debug.LogWarning($"[HidingSpot] {name}: ExitPosition auto-created!");
+            // Auto-created successfully (no warning needed)
         }
     }
     

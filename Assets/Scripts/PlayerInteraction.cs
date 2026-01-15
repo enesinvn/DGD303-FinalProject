@@ -7,10 +7,10 @@ public class PlayerInteraction : MonoBehaviour
     [Header("Interaction Settings")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private float interactionRange = 3f;
-    [SerializeField] private float hidingSpotRange = 1.5f; // Saklanma için daha kısa mesafe
-    [SerializeField] private float hidingSpotAngle = 45f; // Saklanma için daha dar açı
+    [SerializeField] private float hidingSpotRange = 1.5f; // Shorter range for hiding
+    [SerializeField] private float hidingSpotAngle = 45f; // Narrower angle for hiding
     [SerializeField] private LayerMask interactableLayer;
-    [SerializeField] private LayerMask obstacleLayer; // Duvar vs kontrolü için
+    [SerializeField] private LayerMask obstacleLayer; // For wall checks, etc.
     
     [Header("UI")]
     [SerializeField] private GameObject interactionPrompt;
@@ -97,11 +97,11 @@ public class PlayerInteraction : MonoBehaviour
             
             if (interactable != null)
             {
-                // HidingSpot için mesafe kontrolü
+                // Distance check for HidingSpot
                 HidingSpot hidingSpot = hit.collider.GetComponent<HidingSpot>();
                 if (hidingSpot != null && hit.distance > hidingSpotRange)
                 {
-                    // HidingSpot çok uzakta, devam et
+                    // HidingSpot too far away, continue
                 }
                 else
                 {
@@ -117,7 +117,7 @@ public class PlayerInteraction : MonoBehaviour
             }
         }
         
-        // Maksimum mesafe olarak normal interaction range kullan
+        // Use normal interaction range as maximum distance
         float searchRadius = interactionRange * 0.5f;
         Collider[] nearbyColliders = Physics.OverlapSphere(cameraTransform.position + cameraTransform.forward * searchRadius, searchRadius);
         
@@ -134,17 +134,17 @@ public class PlayerInteraction : MonoBehaviour
                 float angle = Vector3.Angle(cameraTransform.forward, directionToObject);
                 float distance = Vector3.Distance(cameraTransform.position, col.transform.position);
                 
-                // HidingSpot için özel kontroller
+                // Special checks for HidingSpot
                 HidingSpot hidingSpot = col.GetComponent<HidingSpot>();
                 if (hidingSpot != null)
                 {
-                    // Saklanma için daha kısa mesafe ve dar açı
+                    // Shorter range and narrower angle for hiding
                     if (angle > hidingSpotAngle || distance > hidingSpotRange)
                     {
                         continue;
                     }
                     
-                    // Arada duvar var mı kontrol et
+                    // Check if there's a wall in between
                     if (!HasLineOfSight(cameraTransform.position, col.transform.position))
                     {
                         Debug.Log($"[PlayerInteraction] HidingSpot {col.name} blocked by obstacle!");
@@ -153,7 +153,7 @@ public class PlayerInteraction : MonoBehaviour
                 }
                 else
                 {
-                    // Normal obje için standart açı kontrolü
+                    // Standard angle check for normal objects
                     if (angle > 60f || distance > interactionRange)
                     {
                         continue;
@@ -195,16 +195,16 @@ public class PlayerInteraction : MonoBehaviour
         Vector3 direction = to - from;
         float distance = direction.magnitude;
         
-        // Raycast ile arada engel var mı kontrol et
+        // Check if there's an obstacle in between using raycast
         RaycastHit hit;
         if (Physics.Raycast(from, direction.normalized, out hit, distance, ~0, QueryTriggerInteraction.Ignore))
         {
-            // Eğer raycast hedefe ulaşmadan bir şeye çarptıysa
-            // ve çarptığı şey saklanma yerinin kendisi değilse
+            // If raycast hit something before reaching the target
+            // and the hit object is not the hiding spot itself
             HidingSpot hitSpot = hit.collider.GetComponent<HidingSpot>();
             if (hitSpot == null)
             {
-                // Arada bir engel var
+                // There's an obstacle in between
                 return false;
             }
         }

@@ -97,19 +97,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HidingSpot
   hidingType: 0
-  hidePosition: {fileID: 0}
-  hideDuration: 0.5
-  requiresBreathHolding: 1
-  breathDrainRate: 10
-  hideIndicator: {fileID: 0}
-  hideLight: {fileID: 0}
-  audioSource: {fileID: 0}
-  enterSound: {fileID: 0}
-  exitSound: {fileID: 0}
-  detectionRadius: 2
-  enemyLayer:
-    serializedVersion: 2
-    m_Bits: 64
+  playerPosition: {fileID: 0}
+  exitPosition: {fileID: 0}
+  hasCustomCamera: 0
+  cameraOffset: {x: 0, y: 0, z: 0}
+  cameraRotation: {x: 0, y: 0, z: 0}
+  isOccupied: 0
+  showGizmos: 1
 --- !u!65 &6891501093509437176
 BoxCollider:
   m_ObjectHideFlags: 0

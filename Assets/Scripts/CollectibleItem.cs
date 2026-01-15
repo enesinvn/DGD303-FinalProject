@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Görev için olmayan, sadece toplanabilir objeler (örnek: koleksiyon parçaları, bonus itemler)
+/// Collectible objects that are not for objectives (examples: collection pieces, bonus items)
 /// </summary>
 public class CollectibleItem : MonoBehaviour, IInteractable
 {
@@ -9,7 +9,7 @@ public class CollectibleItem : MonoBehaviour, IInteractable
     [SerializeField] private string collectibleName = "Collectible";
     [SerializeField] private string collectibleDescription = "A collectible item";
     [SerializeField] private Sprite collectibleIcon;
-    [SerializeField] private int scoreValue = 10; // Toplandığında verilecek puan
+    [SerializeField] private int scoreValue = 10; // Score awarded when collected
     
     [Header("Visual Effects")]
     [SerializeField] private float rotationSpeed = 90f;
@@ -70,7 +70,7 @@ public class CollectibleItem : MonoBehaviour, IInteractable
     {
         if (isPickedUp) return;
         
-        // Envantere ekle (opsiyonel - eğer inventorySystem null ise sadece toplanır)
+        // Add to inventory (optional - if inventorySystem is null, it's just collected)
         if (inventorySystem != null && !inventorySystem.IsInventoryFull())
         {
             inventorySystem.AddItem(collectibleName, collectibleDescription, collectibleIcon, ItemType.Misc, 1, false);
@@ -97,11 +97,11 @@ public class CollectibleItem : MonoBehaviour, IInteractable
             Debug.Log($"Collected: {collectibleName} (+{scoreValue} points) | Total: {totalCollected}");
         }
         
-        // UI Manager'a bildir (eğer varsa)
+        // Notify UI Manager (if exists)
         UIManager uiManager = FindFirstObjectByType<UIManager>();
         if (uiManager != null && showNotification)
         {
-            // UIManager'da ShowNotification metodu varsa kullanılabilir
+            // Can use ShowNotification method if it exists in UIManager
         }
         
         Destroy(gameObject, 0.1f);

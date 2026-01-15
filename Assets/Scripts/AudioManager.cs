@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Oyundaki tüm ses efektlerini ve müzikleri merkezi olarak yöneten manager.
-/// Arka plan müziği, ambiyans sesleri ve ses geçişlerini kontrol eder.
+/// Manager that centrally manages all sound effects and music in the game.
+/// Controls background music, ambient sounds, and audio transitions.
 /// </summary>
 public class AudioManager : MonoBehaviour
 {

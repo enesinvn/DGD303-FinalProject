@@ -74,7 +74,7 @@ public class Flashlight : MonoBehaviour
             flashlight.enabled = isOn;
         }
         
-        // Açma/kapama sesini çal
+        // Play on/off sound
         if (audioSource != null)
         {
             if (isOn && flashlightOnSound != null)

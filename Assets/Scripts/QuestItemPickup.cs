@@ -1,12 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// Görev için gerekli objeleri temsil eder. Bu objeler toplandığında görev sistemi otomatik olarak güncellenir.
+/// Represents required objects for objectives. The objective system is automatically updated when these objects are collected.
 /// </summary>
 public class QuestItemPickup : MonoBehaviour, IInteractable
 {
     [Header("Quest Item Settings")]
-    [SerializeField] private string questItemID; // Görev ID'si (örn: "collect_key", "collect_document")
+    [SerializeField] private string questItemID; // Quest ID (e.g.: "collect_key", "collect_document")
     [SerializeField] private string itemName = "Quest Item";
     [SerializeField] private string itemDescription = "A quest item";
     [SerializeField] private Sprite itemIcon;
@@ -89,12 +89,12 @@ public class QuestItemPickup : MonoBehaviour, IInteractable
             return;
         }
         
-        // Envantere ekle
+        // Add to inventory
         bool added = inventorySystem.AddItem(itemName, itemDescription, itemIcon, ItemType.QuestItem, 1, false);
         
         if (added)
         {
-            // Görev sistemine bildir
+            // Notify objective system
             if (objectiveSystem != null)
             {
                 objectiveSystem.OnItemCollected(itemName);

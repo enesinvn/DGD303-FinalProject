@@ -215,7 +215,7 @@ public class Elevator : MonoBehaviour
                 foreach (string itemName in requiredItemNames)
                 {
                     bool hasItem = inventorySystem.HasItem(itemName);
-                    string checkmark = hasItem ? "<color=green>✓</color>" : "<color=red>✗</color>";
+                    string checkmark = hasItem ? "<color=green>[OK]</color>" : "<color=red>[X]</color>";
                     status += $"{checkmark} {itemName}\n";
                 }
             }

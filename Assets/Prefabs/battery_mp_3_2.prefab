@@ -28,7 +28,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1274164523474405588}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 7.379059, y: 0.26100516, z: -4.1221027}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -129,6 +129,15 @@ MonoBehaviour:
   rotationSpeed: 0
   bobSpeed: 0
   bobAmount: 0
+  enableGlow: 1
+  glowColor: {r: 1, g: 0.8, b: 0.3, a: 1}
+  glowIntensity: 2
+  glowSpeed: 2
+  minGlowIntensity: 0.5
+  maxGlowIntensity: 3
+  addPointLight: 1
+  lightRange: 3
+  lightIntensity: 1
   audioSource: {fileID: 0}
   pickupSound: {fileID: 0}
   flashlight: {fileID: 0}

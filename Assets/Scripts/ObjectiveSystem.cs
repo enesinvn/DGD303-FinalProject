@@ -289,7 +289,7 @@ public class ObjectiveSystem : MonoBehaviour
     
     void UpdateUI()
     {
-        // Tüm aktif ve tamamlanmamış görevleri bul
+        // Find all active and incomplete objectives
         var activeObjectives = objectives.FindAll(o => o.isActive && !o.isCompleted);
         
         if (activeObjectives.Count > 0)
@@ -299,13 +299,13 @@ public class ObjectiveSystem : MonoBehaviour
                 objectiveUI.SetActive(true);
             }
             
-            // İlk görevi başlık olarak göster
+            // Show first objective as title
             if (objectiveTitleText != null)
             {
                 objectiveTitleText.text = activeObjectives[0].title;
             }
             
-            // TÜM aktif görevleri alt alta listele
+            // List ALL active objectives vertically
             if (objectiveDescriptionText != null)
             {
                 string allObjectives = "";
@@ -314,12 +314,12 @@ public class ObjectiveSystem : MonoBehaviour
                 {
                     if (i == 0)
                     {
-                        // İlk görevin açıklaması
+                        // First objective's description
                         allObjectives += activeObjectives[i].description + "\n";
                     }
                     else
                     {
-                        // Diğer görevler başlık olarak
+                        // Other objectives as titles
                         allObjectives += "\n• " + activeObjectives[i].title;
                     }
                 }

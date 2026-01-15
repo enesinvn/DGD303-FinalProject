@@ -6,9 +6,9 @@ public class EnemyAI : MonoBehaviour
 {
     public enum PatrolMode
     {
-        FixedPoints,        // Belirlenen patrol noktalarını takip et
-        RandomWaypoints,    // Rastgele NavMesh noktalarına git
-        Mixed               // İkisini karıştır (patrol noktaları varsa onları kullan, yoksa rastgele)
+        FixedPoints,        // Follow designated patrol points
+        RandomWaypoints,    // Go to random NavMesh points
+        Mixed               // Mix both (use patrol points if available, otherwise random)
     }
     
     public enum EnemyState
@@ -123,7 +123,7 @@ public class EnemyAI : MonoBehaviour
         searchTimer = 0f;
         hasSeenPlayer = false;
         
-        // Patrol moduna göre başlat
+        // Start based on patrol mode
         if (patrolMode == PatrolMode.FixedPoints || patrolMode == PatrolMode.Mixed)
         {
             if (patrolPoints != null && patrolPoints.Length > 0)
@@ -365,7 +365,7 @@ public class EnemyAI : MonoBehaviour
             case EnemyState.Investigate:
                 return searchAnimationSpeed;
             case EnemyState.Attack:
-                return chaseAnimationSpeed; // Attack sırasında chase hızı kullan
+                return chaseAnimationSpeed; // Use chase speed during Attack
             default:
                 return 1f;
         }
@@ -680,7 +680,7 @@ public class EnemyAI : MonoBehaviour
     {
         agent.speed = patrolSpeed;
         
-        // Patrol moduna göre davranış belirle
+        // Determine behavior based on patrol mode
         bool useFixedPoints = ShouldUseFixedPatrolPoints();
         
         if (useFixedPoints)
@@ -759,12 +759,12 @@ public class EnemyAI : MonoBehaviour
     
     void PatrolRandomWaypoints()
     {
-        // Eğer hedefe ulaştıysak veya hedef yoksa
+        // If we reached the target or there is no target
         if (!hasRandomDestination || (!agent.pathPending && agent.remainingDistance <= patrolPointReachedDistance))
         {
             waitTimer += Time.deltaTime;
             
-            // Rastgele bekleme süresi dolduysa yeni hedef belirle
+            // Set new target when random wait time is up
             if (waitTimer >= currentRandomWaitTime)
             {
                 Vector3 randomDestination = GetRandomNavMeshPoint(transform.position, randomPatrolRadius);
@@ -782,7 +782,7 @@ public class EnemyAI : MonoBehaviour
                 else
                 {
                     LogWarning("Failed to find random NavMesh point!");
-                    // Tekrar dene
+                    // Try again
                     waitTimer = 0f;
                     currentRandomWaitTime = 0.5f;
                 }
@@ -790,7 +790,7 @@ public class EnemyAI : MonoBehaviour
         }
         else if (!agent.hasPath && hasRandomDestination)
         {
-            // Yol kayboldu, yeniden hesapla
+            // Path lost, recalculate
             agent.SetDestination(currentRandomDestination);
             Log("Path lost, recalculating random waypoint");
         }
@@ -798,11 +798,11 @@ public class EnemyAI : MonoBehaviour
     
     Vector3 GetRandomNavMeshPoint(Vector3 center, float radius)
     {
-        // Rastgele bir nokta seç
-        for (int i = 0; i < 30; i++) // 30 deneme yap
+        // Select a random point
+        for (int i = 0; i < 30; i++) // Try 30 times
         {
             Vector3 randomPoint = center + Random.insideUnitSphere * radius;
-            randomPoint.y = center.y; // Y eksenini koru
+            randomPoint.y = center.y; // Keep Y axis
             
             NavMeshHit hit;
             if (NavMesh.SamplePosition(randomPoint, out hit, radius * 0.5f, NavMesh.AllAreas))
@@ -874,7 +874,7 @@ public class EnemyAI : MonoBehaviour
         
         bool playerKilled = false;
         
-        // ✅ HealthSystem varsa hasar ver
+        // ✅ Deal damage if HealthSystem exists
         if (useHealthSystem && playerHealth != null)
         {
             playerHealth.TakeDamage(attackDamage);
@@ -1027,7 +1027,7 @@ public class EnemyAI : MonoBehaviour
         switch (newState)
         {
             case EnemyState.Chase:
-                // Alert sesi çal
+                // Play alert sound
                 if (audioSource != null && alertSounds != null && alertSounds.Length > 0 && previousState == EnemyState.Patrol)
                 {
                     audioSource.PlayOneShot(alertSounds[Random.Range(0, alertSounds.Length)]);
@@ -1200,7 +1200,7 @@ public class EnemyAI : MonoBehaviour
             Gizmos.DrawLine(transform.position + Vector3.up, lastKnownPlayerPosition + Vector3.up);
         }
         
-        // Son duyulan ses (Cyan)
+        // Last heard sound (Cyan)
         if (Time.time - lastSoundTime_Memory < soundMemoryDuration)
         {
             Gizmos.color = Color.cyan;
@@ -1226,7 +1226,7 @@ public class EnemyAI : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position + Vector3.up * 2.5f, 0.3f);
     }
     
-    // ✅ Public getter (Door'un kontrol etmesi için)
+    // ✅ Public getter (for Door to check)
     public string GetCurrentStateName()
     {
         return currentState.ToString();
@@ -1238,7 +1238,7 @@ public class EnemyAI : MonoBehaviour
     }
     
     /// <summary>
-    /// Patrol point'leri programatik olarak ayarlamak için
+    /// Set patrol points programmatically
     /// </summary>
     public void SetPatrolPoints(Transform[] points)
     {

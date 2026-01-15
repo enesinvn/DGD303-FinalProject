@@ -19,7 +19,7 @@ public class PauseManager : MonoBehaviour
     [SerializeField] private Slider volumeSlider;
 
     [Header("Settings")]
-    [SerializeField] private string mainMenuSceneName = "MainMenu"; // Ana menü scene adı
+    [SerializeField] private string mainMenuSceneName = "MainMenu"; // Main menu scene name
 
     [Header("Volume Icon Controller")]
     [SerializeField] private VolumeIconController volumeIconController;
@@ -36,7 +36,7 @@ public class PauseManager : MonoBehaviour
         // Get PlayerController reference
         playerController = FindFirstObjectByType<PlayerController>();
         
-        // Buton listener'ları
+        // Button listeners
         resumeButton.onClick.AddListener(ResumeGame);
         settingsButton.onClick.AddListener(OpenSettings);
         mainMenuButton.onClick.AddListener(LoadMainMenu);
@@ -47,11 +47,11 @@ public class PauseManager : MonoBehaviour
         volumeSlider.onValueChanged.AddListener(ChangeVolume);
         volumeSlider.value = AudioListener.volume;
 
-        // Başlangıçta pause menü kapalı
+        // Pause menu is closed at start
         pausePanel.SetActive(false);
         pauseSettingsPanel.SetActive(false);
 
-        // Başlangıçta icon'u ayarla
+        // Set icon at start
         if (volumeIconController != null)
         {
             volumeIconController.UpdateVolumeIcon(volumeSlider.value);
@@ -60,7 +60,7 @@ public class PauseManager : MonoBehaviour
 
     private void Update()
     {
-        // ESC tuşu kontrolü
+        // ESC key check
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             // Don't allow pause during game over
@@ -81,7 +81,7 @@ public class PauseManager : MonoBehaviour
     {
         pausePanel.SetActive(true);
         pauseSettingsPanel.SetActive(false);
-        Time.timeScale = 0f; // Oyunu durdur
+        Time.timeScale = 0f; // Pause the game
         isPaused = true;
         
         // Disable PlayerController to prevent cursor locking
@@ -107,7 +107,7 @@ public class PauseManager : MonoBehaviour
     {
         pausePanel.SetActive(false);
         pauseSettingsPanel.SetActive(false);
-        Time.timeScale = 1f; // Oyunu devam ettir
+        Time.timeScale = 1f; // Resume the game
         isPaused = false;
         
         // Re-enable PlayerController
@@ -137,7 +137,7 @@ public class PauseManager : MonoBehaviour
 
     public void LoadMainMenu()
     {
-        Time.timeScale = 1f; // Time scale'i normale al
+        Time.timeScale = 1f; // Reset time scale to normal
         SceneManager.LoadScene(mainMenuSceneName);
     }
 
@@ -145,7 +145,7 @@ public class PauseManager : MonoBehaviour
     {
     AudioListener.volume = volume;
     
-    // Icon'u güncelle
+    // Update icon
     if (volumeIconController != null)
     {
         volumeIconController.UpdateVolumeIcon(volume);
@@ -157,7 +157,7 @@ public class PauseManager : MonoBehaviour
 
     public void QuitGame()
     {
-        Time.timeScale = 1f; // Time scale'i normale al
+        Time.timeScale = 1f; // Reset time scale to normal
         #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
         #else
