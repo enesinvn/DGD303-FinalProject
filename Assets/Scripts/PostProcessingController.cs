@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal; // Unity 6 için
+using UnityEngine.Rendering.Universal;
 
 public class PostProcessingController : MonoBehaviour
 {

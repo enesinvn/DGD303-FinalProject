@@ -523,7 +523,7 @@ public class EnemyAI : MonoBehaviour
         {
             if (distanceToHidingSpot > 5f)
             {
-                // Uzakta - normal patrol
+                // Far away - normal patrol
                 if (currentState != EnemyState.Patrol)
                 {
                     ChangeState(EnemyState.Patrol);
@@ -581,7 +581,7 @@ public class EnemyAI : MonoBehaviour
         {
             if (hit.collider.transform != playerTransform && !hit.collider.CompareTag("Player"))
             {
-                return false; // Engel var
+                return false; // Obstacle detected
             }
         }
         
@@ -811,7 +811,7 @@ public class EnemyAI : MonoBehaviour
             }
         }
         
-        return Vector3.zero; // Bulunamadı
+        return Vector3.zero; // Not found
     }
     
     void Chase()
@@ -833,7 +833,7 @@ public class EnemyAI : MonoBehaviour
         }
         else
         {
-            agent.SetDestination(transform.position); // Dur
+            agent.SetDestination(transform.position); // Stop
         }
         
         Vector3 lookDirection = (playerTransform.position - transform.position).normalized;
@@ -874,7 +874,7 @@ public class EnemyAI : MonoBehaviour
         
         bool playerKilled = false;
         
-        // ✅ Deal damage if HealthSystem exists
+        // Deal damage if HealthSystem exists
         if (useHealthSystem && playerHealth != null)
         {
             playerHealth.TakeDamage(attackDamage);
@@ -892,7 +892,7 @@ public class EnemyAI : MonoBehaviour
             Log("Player caught (direct kill mode)");
         }
         
-        // ✅ Ses efekti
+        // Sound effect
         if (audioSource != null)
         {
             if (attackSound != null)
@@ -928,7 +928,7 @@ public class EnemyAI : MonoBehaviour
                     
                     if (distanceToSpot < 3f)
                     {
-                        // Hiding spot'tan uzak rastgele bir nokta bul
+                        // Find random point away from hiding spot
                         Vector3 awayDirection = (transform.position - hidingSpot.transform.position).normalized;
                         Vector3 targetPoint = transform.position + awayDirection * searchRadius;
                         
@@ -946,12 +946,12 @@ public class EnemyAI : MonoBehaviour
         
         if (Vector3.Distance(transform.position, lastKnownPlayerPosition) > 2f)
         {
-            // Son bilinen pozisyona git
+            // Go to last known position
             agent.SetDestination(lastKnownPlayerPosition);
         }
         else
         {
-            // Son pozisyonda - rastgele etrafta ara
+            // At last position - search randomly around
             if (!agent.hasPath || agent.remainingDistance < 1f)
             {
                 Vector3 randomPoint = lastKnownPlayerPosition + Random.insideUnitSphere * searchRadius;
@@ -976,7 +976,7 @@ public class EnemyAI : MonoBehaviour
     {
         agent.speed = searchSpeed;
         
-        // Ses pozisyonuna git
+        // Go to sound position
         if (Vector3.Distance(transform.position, lastSoundPosition) > 1f)
         {
             agent.SetDestination(lastSoundPosition);
@@ -1181,7 +1181,7 @@ public class EnemyAI : MonoBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
         
-        // Hearing range (Mavi)
+        // Hearing range (Blue)
         Gizmos.color = Color.blue;
         Gizmos.DrawWireSphere(transform.position, hearingRange);
         
@@ -1192,7 +1192,7 @@ public class EnemyAI : MonoBehaviour
         Gizmos.DrawRay(transform.position + Vector3.up, leftBoundary * detectionRange);
         Gizmos.DrawRay(transform.position + Vector3.up, rightBoundary * detectionRange);
         
-        // Son bilinen pozisyon (Turuncu)
+        // Last known position (Magenta)
         if (hasSeenPlayer)
         {
             Gizmos.color = Color.magenta;
@@ -1207,7 +1207,7 @@ public class EnemyAI : MonoBehaviour
             Gizmos.DrawWireSphere(lastSoundPosition, 0.5f);
         }
         
-        // Rastgele hedef (Random waypoint - Yeşil)
+        // Random waypoint target (Green)
         if (hasRandomDestination && patrolMode == PatrolMode.RandomWaypoints)
         {
             Gizmos.color = Color.green;
@@ -1215,7 +1215,7 @@ public class EnemyAI : MonoBehaviour
             Gizmos.DrawLine(transform.position + Vector3.up, currentRandomDestination + Vector3.up);
         }
         
-        // Rastgele patrol yarıçapı (Açık yeşil)
+        // Random patrol radius (Light green)
         if (patrolMode == PatrolMode.RandomWaypoints || (patrolMode == PatrolMode.Mixed && (patrolPoints == null || patrolPoints.Length == 0)))
         {
             Gizmos.color = new Color(0.5f, 1f, 0.5f, 0.3f);
@@ -1226,7 +1226,7 @@ public class EnemyAI : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position + Vector3.up * 2.5f, 0.3f);
     }
     
-    // ✅ Public getter (for Door to check)
+    // Public getter (for Door to check)
     public string GetCurrentStateName()
     {
         return currentState.ToString();
@@ -1255,7 +1255,7 @@ public class EnemyAI : MonoBehaviour
     }
     
     /// <summary>
-    /// Mevcut patrol point'leri almak için
+    /// Get current patrol points
     /// </summary>
     public Transform[] GetPatrolPoints()
     {

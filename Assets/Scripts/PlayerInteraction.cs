@@ -357,11 +357,11 @@ public class PlayerInteraction : MonoBehaviour
     {
         if (showDebugRay && cameraTransform != null)
         {
-            // Normal etkileşim mesafesi
+            // Normal interaction range
             Gizmos.color = currentInteractable != null ? Color.green : Color.yellow;
             Gizmos.DrawRay(cameraTransform.position, cameraTransform.forward * interactionRange);
             
-            // Saklanma mesafesi (daha kısa)
+            // Hiding spot range (shorter)
             HidingSpot currentHiding = currentInteractableObject != null ? currentInteractableObject.GetComponent<HidingSpot>() : null;
             if (currentHiding != null)
             {

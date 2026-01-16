@@ -45,7 +45,7 @@ public class Door : MonoBehaviour, IInteractable
     private Coroutine autoCloseCoroutine;
     private bool openedByNPC = false;
     private bool soundPlayed = false;
-    private float soundTriggerProgress = 0.15f; // Ses %15 açılınca çalar
+    private float soundTriggerProgress = 0.15f; // Sound plays at 15% open
     
     public bool IsOpen { get { return isOpen; } }
     public bool IsLocked 
